@@ -19,10 +19,12 @@ export ONEDNN_MAX_CPU_ISA=AVX512_CORE_AMX
 bash set_env.sh
 ```
 
+### Quick launcher
+```
+python ./gen-efficientnet-pytorch/main.py -e --performance --pretrained --dummy -w 20 -i 100 -a resnet50 -b 64 --precision "float32"
+```
+
 ### Run workloads
 ```
 bash run_xxx.sh
 ```
-
-### Quick launcher
-python ./gen-efficientnet-pytorch/main.py -e --performance --pretrained --dummy -w 20 -i 100 -a resnet50 -b 64 --precision "float32"
