@@ -23,3 +23,6 @@ bash set_env.sh
 ```
 bash run_xxx.sh
 ```
+
+### Quick launcher
+python ./gen-efficientnet-pytorch/main.py -e --performance --pretrained --dummy -w 20 -i 100 -a resnet50 -b 64 --precision "float32"
