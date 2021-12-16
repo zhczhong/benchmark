@@ -33,7 +33,7 @@ python ./gen-efficientnet-pytorch/main.py \
       --precision "float32"
 ```
 
-### Run workloads
+### Run automation
 ```
 bash run_xxx.sh
 ```
