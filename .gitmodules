@@ -1,0 +1,3 @@
+[submodule "gen-efficientnet-pytorch"]
+	path = gen-efficientnet-pytorch
+	url = https://github.com/rwightman/gen-efficientnet-pytorch.git
