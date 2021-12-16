@@ -19,7 +19,7 @@ mkdir logs
 # CUDA FP32
 for model in ${MODEL_NAME_LIST[@]}
 do
-	python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --jit --gpu 0 2>&1 | tee ./logs/$model-jit-FP32.log
+    python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --jit --gpu 0 2>&1 | tee ./logs/$model-jit-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-jit-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo $model jit FP32 $latency $throughput | tee -a ./logs/summary.log
@@ -27,7 +27,7 @@ done
 
 for model in ${MODEL_NAME_LIST[@]}
 do
-	python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --jit --jit_optimize --gpu 0 2>&1 | tee ./logs/$model-jit_optimize-FP32.log
+    python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --jit --jit_optimize --gpu 0 2>&1 | tee ./logs/$model-jit_optimize-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-jit_optimize-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit_optimize-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo $model jit_optimize FP32 $latency $throughput | tee -a ./logs/summary.log
@@ -35,7 +35,7 @@ done
 
 for model in ${MODEL_NAME_LIST[@]}
 do
-	python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --gpu 0 2>&1 | tee ./logs/$model-imperative-FP32.log
+    python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 128 --precision "float32" --gpu 0 2>&1 | tee ./logs/$model-imperative-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-imperative-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-imperative-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo $model imperative FP32 $latency $throughput | tee -a ./logs/summary.log
