@@ -35,5 +35,5 @@ python ./gen-efficientnet-pytorch/main.py \
 
 ### Run automation
 ```
-bash run_xxx.sh
+bash run_auto_xxx.sh
 ```
