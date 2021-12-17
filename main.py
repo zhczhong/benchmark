@@ -403,12 +403,12 @@ def main_worker(gpu, ngpus_per_node, args):
             #    image = image.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(), torch.no_grad():
                     model = torch.jit.trace(model, image)
-            if args.precision == "bfloat16" and args.cuda:
+            elif args.precision == "bfloat16" and args.cuda:
             #    image = image.to(torch.bfloat16)
                 with torch.cuda.amp.autocast(), torch.no_grad():
                     print("Using CUDA autocast ...")
                     model = torch.jit.trace(model, image)
-            elif args.precision == "float32":
+            else:
                 with torch.no_grad():
                     model = torch.jit.trace(model, image)
             model = torch.jit.freeze(model)
@@ -426,12 +426,12 @@ def main_worker(gpu, ngpus_per_node, args):
             #    image = image.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(), torch.no_grad():
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
-            if args.precision == "bfloat16" and args.cuda:
+            elif args.precision == "bfloat16" and args.cuda:
             #    image = image.to(torch.bfloat16)
                 with torch.cuda.amp.autocast(), torch.no_grad():
                     print("Using CUDA autocast ...")
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
-            elif args.precision == "float32":
+            else:
                 with torch.no_grad():
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
             # model = torch.jit.freeze(model) # jit_optimize already freezes model, so can't freeze again
@@ -469,8 +469,18 @@ def main_worker(gpu, ngpus_per_node, args):
             x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
             model = ipex.quantization.convert(model, conf, x)
             print("running int8 evalation step\n")
-
-        res = validate(val_loader, model, criterion, args)
+            
+        if args.precision == "bfloat16" and not args.cuda:
+            print("Using CPU autocast ...")
+            with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                res = validate(val_loader, model, criterion, args)
+        elif args.precision == "bfloat16" and args.cuda:
+            print("Using CUDA autocast ...")
+            with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                res = validate(val_loader, model, criterion, args)
+        else:  
+            res = validate(val_loader, model, criterion, args)
+        
         # with open('res.txt', 'w') as f:
         #     print(res, file=f)
         return
@@ -485,7 +495,16 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # evaluate on validation set
         if not args.performance:
-            acc1 = validate(val_loader, model, criterion, args)
+            if args.precision == "bfloat16" and not args.cuda:
+                print("Using CPU autocast ...")
+                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                    acc1 = validate(val_loader, model, criterion, args)
+            elif args.precision == "bfloat16" and args.cuda:
+                print("Using CUDA autocast ...")
+                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                    acc1 = validate(val_loader, model, criterion, args)
+            else:
+                acc1 = validate(val_loader, model, criterion, args)
 
             # remember best acc@1 and save checkpoint
             is_best = acc1 > best_acc1
@@ -616,25 +635,9 @@ def validate(val_loader, model, criterion, args):
                 # compute output
                 if args.profile:
                     with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
-                        if args.precision == "bfloat16" and not args.cuda:
-                            with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
-                                output = model(images)
-                        if args.precision == "bfloat16" and args.cuda:
-                            print("Using CUDA autocast ...")
-                            with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
-                                output = model(images)
-                        else:
-                            output = model(images)
-                else:
-                    if args.precision == "bfloat16" and not args.cuda:
-                        with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
-                            output = model(images)
-                    if args.precision == "bfloat16" and args.cuda:
-                        print("Using CUDA autocast ...")
-                        with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
-                            output = model(images)
-                    else:
                         output = model(images)
+                else:
+                    output = model(images)
 
                 # measure elapsed time
                 if i >= warmup:
