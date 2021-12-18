@@ -7,6 +7,8 @@ model_all="alexnet,densenet161,efficientnet_b2,fbnetc_100,googlenet,inception_v3
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
 # export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
+export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
+export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
 export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
 export KMP_AFFINITY="granularity=fine,compact,1,0"
 export KMP_BLOCKTIME=1
