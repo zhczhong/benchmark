@@ -1,5 +1,12 @@
 set -x
 
+# set-ups
+precision="bfloat16"
+bs=1
+num_iter=200
+cores_per_ins=4
+
+#
 cd gen-efficientnet-pytorch
 WS=${PWD}
 rm -rf multi-instance-sh
@@ -11,7 +18,7 @@ mkdir logs/multi-instance-logs
 # export environment variables
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
-export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
+# export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
 export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
 export KMP_AFFINITY="granularity=fine,compact,1,0"
 export KMP_BLOCKTIME=1
@@ -19,7 +26,7 @@ export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
 export KMP_SETTINGS=1
 
 # fetch cpu and core info for multi-instance setup
-cores_per_instance=4
+cores_per_instance=$cores_per_ins
 numa_nodes_use=0
 cat /etc/os-release
 cat /proc/sys/kernel/numa_balancing
@@ -68,7 +75,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 1 --precision "float32" --jit --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --no-cuda \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
@@ -88,7 +95,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:float32 bs:1 jit:jit throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:jit throughput:${throughput} | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -100,7 +107,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 1 --precision "float32" --jit --jit_optimize --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
@@ -120,7 +127,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:float32 bs:1 jit:jit_optimize throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:jit_optimize throughput:${throughput} | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -132,7 +139,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i 200 -a $model -b 1 --precision "float32" --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --no-cuda \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
@@ -152,6 +159,6 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:float32 bs:1 jit:imperative throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:imperative throughput:${throughput} | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
