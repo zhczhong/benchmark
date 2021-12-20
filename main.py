@@ -400,17 +400,18 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
-            #    image = image.to(torch.bfloat16)
+                image = image.to(torch.bfloat16)
+                print("converted")
                 with torch.cpu.amp.autocast(), torch.no_grad():
-                    model = torch.jit.trace(model, image)
+                    model = torch.jit.trace(model, image, check_trace=False)
             elif args.precision == "bfloat16" and args.cuda:
-            #    image = image.to(torch.bfloat16)
+                image = image.to(torch.bfloat16)
                 with torch.cuda.amp.autocast(), torch.no_grad():
                     print("Using CUDA autocast ...")
-                    model = torch.jit.trace(model, image)
+                    model = torch.jit.trace(model, image, check_trace=False)
             else:
                 with torch.no_grad():
-                    model = torch.jit.trace(model, image)
+                    model = torch.jit.trace(model, image, check_trace=False)
             model = torch.jit.freeze(model)
             # input_var = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
             # model = torch.jit.trace(model, input_var)
@@ -423,17 +424,17 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
-            #    image = image.to(torch.bfloat16)
+                image = image.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(), torch.no_grad():
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             elif args.precision == "bfloat16" and args.cuda:
-            #    image = image.to(torch.bfloat16)
+                image = image.to(torch.bfloat16)
                 with torch.cuda.amp.autocast(), torch.no_grad():
                     print("Using CUDA autocast ...")
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             else:
                 with torch.no_grad():
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             # model = torch.jit.freeze(model) # jit_optimize already freezes model, so can't freeze again
             # input_var = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
             # model = torch.jit.trace(model, input_var)
@@ -614,6 +615,8 @@ def validate(val_loader, model, criterion, args):
             print("Running with bfloat16...")
         if args.dummy:
             images = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
+            if args.precision == "bfloat16":
+                images = images.to(torch.bfloat16)
             target = torch.arange(1, args.batch_size + 1).long()
             # print("Start convert to onnx!")
             # torch.onnx.export(model.module, images, args.arch + ".onnx", verbose=False)
@@ -654,6 +657,8 @@ def validate(val_loader, model, criterion, args):
                         images = images.cuda(args.gpu, non_blocking=True)
                     if args.cuda:
                         target = target.cuda(args.gpu, non_blocking=True)
+                    if args.precision == "bfloat16":
+                        images = images.to(torch.bfloat16)
                     if args.profile:
                         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                             output = model(images)
