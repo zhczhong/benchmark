@@ -401,7 +401,6 @@ def main_worker(gpu, ngpus_per_node, args):
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
                 image = image.to(torch.bfloat16)
-                print("converted")
                 with torch.cpu.amp.autocast(), torch.no_grad():
                     model = torch.jit.trace(model, image, check_trace=False)
             elif args.precision == "bfloat16" and args.cuda:
