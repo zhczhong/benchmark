@@ -395,62 +395,48 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.evaluate:
         if args.jit and not args.jit_optimize:
-            # try:
             image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
                 image = image.to(torch.bfloat16)
-                with torch.cpu.amp.autocast(), torch.no_grad():
+                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
+                    print("Using CPU autocast to JIT ...")
+                    model = model.to(dtype=torch.bfloat16)
                     model = torch.jit.trace(model, image, check_trace=False)
             elif args.precision == "bfloat16" and args.cuda:
-                image = image.to(torch.bfloat16)
-                with torch.cuda.amp.autocast(), torch.no_grad():
-                    print("Using CUDA autocast ...")
+                image = image.to(torch.float16)
+                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
+                    print("Using CUDA autocast to JIT ...")
+                    model = model.to(dtype=torch.float16)
                     model = torch.jit.trace(model, image, check_trace=False)
             else:
                 with torch.no_grad():
                     model = torch.jit.trace(model, image, check_trace=False)
             model = torch.jit.freeze(model)
-            # input_var = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
-            # model = torch.jit.trace(model, input_var)
             print("---- With JIT enabled.")
-            # except:
-                # print("---- With JIT disabled.")
         if args.jit and args.jit_optimize:
-            # try:
             image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
                 image = image.to(torch.bfloat16)
-                with torch.cpu.amp.autocast(), torch.no_grad():
+                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
+                    print("Using CPU autocast to JIT.optimize ...")
+                    model = model.to(dtype=torch.bfloat16)
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             elif args.precision == "bfloat16" and args.cuda:
-                image = image.to(torch.bfloat16)
-                with torch.cuda.amp.autocast(), torch.no_grad():
-                    print("Using CUDA autocast ...")
+                image = image.to(torch.float16)
+                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
+                    print("Using CUDA autocast to JIT.optimize ...")
+                    model = model.to(dtype=torch.float16)
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             else:
                 with torch.no_grad():
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
-            # model = torch.jit.freeze(model) # jit_optimize already freezes model, so can't freeze again
-            # input_var = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
-            # model = torch.jit.trace(model, input_var)
-            print("---- With JIT-optimize-for-inference enabled.")
-            # except:
-                # print("---- With JIT-optimize-for-inference disabled.")
+            print("---- With JIT.optimize_for_inference enabled.")
         if args.precision == "int8":
             import intel_extension_for_pytorch as ipex
-            # if args.int8_mkldnn:
-                # torch.backends.quantized.engine = 'mkldnn'
-            # from lpot.experimental import Quantization, common
-            # quantizer = Quantization(args.config_file)
-            # dataset = quantizer.dataset('dummy', (args.batch_size, 3, 224, 224), label=True)
-            # quantizer.calib_dataloader = common.DataLoader(dataset)
-            # quantizer.model = common.Model(model)
-            # q_model = quantizer()
-            # model = q_model.model
             model = optimization.fuse(model)
             print("runing int8 calibration step\n")
             conf = ipex.quantization.QuantConf(qscheme=torch.per_tensor_symmetric)
@@ -614,9 +600,10 @@ def validate(val_loader, model, criterion, args):
             print("Running with bfloat16...")
         if args.dummy:
             images = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
+            target = torch.arange(1, args.batch_size + 1).long()
             if args.precision == "bfloat16":
                 images = images.to(torch.bfloat16)
-            target = torch.arange(1, args.batch_size + 1).long()
+                target = target.to(torch.bfloat16)
             # print("Start convert to onnx!")
             # torch.onnx.export(model.module, images, args.arch + ".onnx", verbose=False)
             # print("End convert to onnx!")
@@ -658,6 +645,7 @@ def validate(val_loader, model, criterion, args):
                         target = target.cuda(args.gpu, non_blocking=True)
                     if args.precision == "bfloat16":
                         images = images.to(torch.bfloat16)
+                        target = target.to(torch.bfloat16)
                     if args.profile:
                         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                             output = model(images)
