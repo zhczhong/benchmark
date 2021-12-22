@@ -13,4 +13,11 @@ cp ../pretrain_setup.py ./
 cp -r ../pretrainedmodels ./
 pip install -r ../requirements.txt
 python pretrain_setup.py install
-pip install --no-deps torchvision -f https://download.pytorch.org/whl/torch_stable.html
+
+# install torchvision v0.11.1
+git clone https://github.com/pytorch/vision.git
+cd vision
+git checkout v0.11.1
+python setup.py install
+cd ..
+#pip install --no-deps torchvision -f https://download.pytorch.org/whl/torch_stable.html
