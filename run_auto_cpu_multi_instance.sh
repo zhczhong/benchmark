@@ -67,6 +67,7 @@ model_all="alexnet,densenet161,efficientnet_b2,fbnetc_100,googlenet,inception_v3
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
 # benchmark
+# jit
 for model in ${MODEL_NAME_LIST[@]}
 do
     # generate multiple instance scripts
@@ -99,6 +100,7 @@ do
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
+# jit.optimize
 for model in ${MODEL_NAME_LIST[@]}
 do
     # generate multiple instance scripts
@@ -131,6 +133,7 @@ do
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
+# imperative
 for model in ${MODEL_NAME_LIST[@]}
 do
     # generate multiple instance scripts
