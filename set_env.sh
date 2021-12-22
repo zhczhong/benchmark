@@ -15,6 +15,7 @@ pip install -r ../requirements.txt
 python pretrain_setup.py install
 
 # install torchvision v0.11.1
+pip uninstall -y torchvision
 git clone https://github.com/pytorch/vision.git
 cd vision
 git checkout v0.11.1
