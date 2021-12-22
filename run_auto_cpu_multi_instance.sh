@@ -1,10 +1,10 @@
 set -x
 
 # set-ups
-precision="bfloat16"
-bs=1
-num_iter=200
-cores_per_ins=4
+precision=$1
+bs=$2
+num_iter=500
+cores_per_ins=$3
 
 #
 cd gen-efficientnet-pytorch
