@@ -126,6 +126,8 @@ parser.add_argument('--num-classes', type=int, default=1000,
                     help='Number classes in dataset')
 parser.add_argument('--channels_last', type=int, default=1,
                     help='use channels last format')
+parser.add_argument('--to_mkldnn', type=int, default=0,
+                    help='use mkldnn')
 parser.add_argument('--config_file', type=str, default="./conf.yaml",
                     help='config file for int8 tune')
 parser.add_argument("--int8_mkldnn", action='store_true',
@@ -291,7 +293,8 @@ def main_worker(gpu, ngpus_per_node, args):
         model_oob = model
         model_oob = model_oob.to(memory_format=torch.channels_last)
         model = model_oob
-
+    if args.to_mkldnn and args.evaluate:
+        model = torch.utils.mkldnn.to_mkldnn(model)
     if args.ipex:
         import intel_extension_for_pytorch as ipex
         if args.precision == "bfloat16":
@@ -305,10 +308,10 @@ def main_worker(gpu, ngpus_per_node, args):
         criterion = nn.CrossEntropyLoss().cuda(args.gpu)
     else:
         criterion = nn.CrossEntropyLoss()
-
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+    if not args.evaluate:
+        optimizer = torch.optim.SGD(model.parameters(), args.lr,
+                                    momentum=args.momentum,
+                                    weight_decay=args.weight_decay)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -395,7 +398,12 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.evaluate:
         if args.jit and not args.jit_optimize:
-            image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            if args.channels_last:
+                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            else:
+                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+            if args.to_mkldnn:
+                image = image.to_mkldnn()
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
@@ -416,7 +424,12 @@ def main_worker(gpu, ngpus_per_node, args):
             model = torch.jit.freeze(model)
             print("---- With JIT enabled.")
         if args.jit and args.jit_optimize:
-            image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            if args.channels_last:
+                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            else:
+                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+            if args.to_mkldnn:
+                image = image.to_mkldnn()
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
             if args.precision == "bfloat16" and not args.cuda:
@@ -444,7 +457,12 @@ def main_worker(gpu, ngpus_per_node, args):
                 for i in range(10):
                     with ipex.quantization.calibrate(conf):
                         # compute output
-                        images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
+                        if args.channels_last:
+                            images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
+                        else:
+                            images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
+                        if args.to_mkldnn:
+                            images = images.to_mkldnn()
                         print(".........cooking config_for_ipex_int8.json..........")
                         output = model(images)
                 conf.save("./config_for_ipex_int8.json")
@@ -452,7 +470,12 @@ def main_worker(gpu, ngpus_per_node, args):
             
             model = optimization.fuse(model, inplace=True)
             conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
-            x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            if args.channels_last:
+                x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+            else:
+                x = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+            if args.to_mkldnn:
+                x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
             print("running int8 evalation step\n")
             
@@ -543,7 +566,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             input_oob = images
             input_oob = input_oob.to(memory_format=torch.channels_last)
             images = input_oob
-
+        if args.to_mkldnn:
+            images = images.to_mkldnn()
+            
         # compute output
         output = model(images)
         loss = criterion(output, target)
@@ -607,12 +632,16 @@ def validate(val_loader, model, criterion, args):
             # print("Start convert to onnx!")
             # torch.onnx.export(model.module, images, args.arch + ".onnx", verbose=False)
             # print("End convert to onnx!")
-            ###to_oob
+            ### to_oob (ch_last or to_mkldnn)
             model_oob, input_oob = model, images
             if args.channels_last:
                 model_oob, input_oob = model, images
                 #model_oob = model_oob.to(memory_format=torch.channels_last)
                 input_oob = input_oob.to(memory_format=torch.channels_last)
+            if args.to_mkldnn:
+                input_oob = input_oob.to_mkldnn()
+            if args.to_mkldnn and args.evaluate:
+                model_oob = torch.utils.mkldnn.to_mkldnn(model_oob)
             model, images = model_oob, input_oob
             for i in range(iterations + warmup):
                 if i >= warmup:
