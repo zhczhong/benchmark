@@ -77,7 +77,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --no-cuda --channels_last 1 \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
@@ -110,7 +110,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --no-cuda --channels_last 1 \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
@@ -143,7 +143,7 @@ do
         real_cores_per_instance=$(echo ${cpu_array[i]} |awk -F, '{print NF}')
         log_file="${WS}/logs/multi-instance-logs/rcpi${real_cores_per_instance}-ins${i}.log"
         NUMA_OPERATOR="numactl --localalloc --physcpubind ${cpu_array[i]}"
-        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda \
+        printf "${NUMA_OPERATOR} python main.py -e --performance --pretrained --dummy -w 20 -i $num_iter -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda --channels_last 0 \
         > ${log_file} 2>&1 &  \n" | tee -a ${WS}/multi-instance-sh/temp.sh
     done
     echo -e "\n wait" >> ${WS}/multi-instance-sh/temp.sh
