@@ -709,6 +709,7 @@ def validate(val_loader, model, criterion, args):
                         args.arch + str(i + 1) + '-' + str(os.getpid()) + '.json'
 
             prof.export_chrome_trace(timeline_file)
+            print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
             # table_res = prof.key_averages().table(sort_by="cpu_time_total")
             # save_profile_result(torch.backends.quantized.engine + "_result_average.xlsx", table_res)
 
