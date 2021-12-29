@@ -109,7 +109,7 @@ parser.add_argument('--jit_optimize', action='store_true', default=False,
                     help='enable JIT-optimize-for-inference path')
 parser.add_argument('--llga', action='store_true', default=False, help='enable LLGA')
 parser.add_argument('--precision', type=str, default="float32",
-                    help='precision, float32, int8, bfloat16')
+                    help='precision: float32, bfloat16, int8_ipex, int8_imperative, int8_fx')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disable CUDA')
 parser.add_argument('-i', '--iterations', default=200, type=int, metavar='N',
@@ -448,7 +448,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 with torch.no_grad():
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             print("---- With JIT.optimize_for_inference enabled.")
-        if args.precision == "int8":
+        if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
             model = optimization.fuse(model)
             print("runing int8 calibration step\n")
