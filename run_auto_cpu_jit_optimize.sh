@@ -10,7 +10,7 @@ model_all="alexnet,resnet34" #test
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
-export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
+# export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
 export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
