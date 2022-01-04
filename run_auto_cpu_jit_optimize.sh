@@ -27,7 +27,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --no-cuda --channels_last 1 2>&1 | tee ./logs/$model-imperative-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-imperative-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-imperative-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model imperative $precision $throughput | tee -a ./logs/summary.log
+    echo $model throughput_mode imperative $precision $bs $throughput | tee -a ./logs/summary.log
 done
 
 # jit
@@ -36,7 +36,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --no-cuda --channels_last 1 2>&1 | tee ./logs/$model-jit-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-jit-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model jit $precision $throughput | tee -a ./logs/summary.log
+    echo $model throughput_mode jit $precision $bs $throughput | tee -a ./logs/summary.log
 done
 
 # jit_optimize
@@ -45,7 +45,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda --channels_last 0 2>&1 | tee ./logs/$model-jit_optimize-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-jit_optimize-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit_optimize-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model jit_optimize $precision $throughput | tee -a ./logs/summary.log
+    echo $model throughput_mode jit_optimize $precision $bs $throughput | tee -a ./logs/summary.log
 done
 
 cat ./logs/summary.log
