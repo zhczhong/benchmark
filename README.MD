@@ -14,7 +14,7 @@ export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
 export ONEDNN_MAX_CPU_ISA=AVX512_CORE_AMX
 ```
 
-### Prepare gen-efficientnet-pytorch
+### Prepare torchvision v0.11.1 and gen-efficientnet-pytorch (submodules)
 ```
 bash set_env.sh
 ```
