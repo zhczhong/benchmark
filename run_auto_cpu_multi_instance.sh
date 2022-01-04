@@ -97,7 +97,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:imperative throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo $model multi_instance_mode imperative $precision $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -130,7 +130,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:jit throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo $model multi_instance_mode jit $precision $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -163,6 +163,6 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo multi-instance-mode model:${model} precision:$precision bs:$bs jit:jit_optimize throughput:${throughput} | tee -a ${WS}/logs/summary.log
+    echo $model multi_instance_mode jit_optimize $precision $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
