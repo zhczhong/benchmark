@@ -66,6 +66,13 @@ model_all="alexnet,densenet121,densenet161,densenet169,densenet201,efficientnet_
 model_all="alexnet,densenet161,efficientnet_b2,fbnetc_100,googlenet,inception_v3,mnasnet1_0,resnet152,resnet34,resnext101_32x8d,shufflenet_v2_x0_5,spnasnet_100,squeezenet1_0,vgg16,wide_resnet50_2"
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
+if [ ${precision} == "float32" ];then
+precision_log="FP32"
+fi
+if [ ${precision} == "bfloat16" ];then
+precision_log="BF16"
+fi
+
 ### benchmark
 
 # imperative
@@ -97,7 +104,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo broad_vision $model multi_instance_mode imperative $precision $bs $throughput | tee -a ${WS}/logs/summary.log
+    echo broad_vision $model multi_instance_mode imperative $precision_log $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -130,7 +137,7 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo broad_vision $model multi_instance_mode jit $precision $bs $throughput | tee -a ${WS}/logs/summary.log
+    echo broad_vision $model multi_instance_mode jit $precision_log $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
 
@@ -163,6 +170,6 @@ do
             printf("%.3f", sum);
         }
     ')
-    echo broad_vision $model multi_instance_mode jit_optimize $precision $bs $throughput | tee -a ${WS}/logs/summary.log
+    echo broad_vision $model multi_instance_mode jit_optimize $precision_log $bs $throughput | tee -a ${WS}/logs/summary.log
     rm -rf ${WS}/logs/multi-instance-logs/*
 done
