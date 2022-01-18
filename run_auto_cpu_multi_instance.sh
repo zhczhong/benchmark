@@ -15,6 +15,7 @@ rm -rf logs
 mkdir logs
 mkdir logs/multi-instance-logs
 
+export
 ### export environment variables
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
