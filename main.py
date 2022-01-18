@@ -233,7 +233,7 @@ def main_worker(gpu, ngpus_per_node, args):
             model = pretrainedmodels.__dict__[args.arch](pretrained=None)
         model.train(False)
     elif 'fpn' in args.arch:
-        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
     else:
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
