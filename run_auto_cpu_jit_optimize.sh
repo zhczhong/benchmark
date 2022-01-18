@@ -11,6 +11,7 @@ model_all="resnet50,resnet34,resnext101_32x16d,mobilenet_v2,shufflenet_v2_x1_0,v
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
+export
 # export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
