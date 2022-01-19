@@ -234,6 +234,8 @@ def main_worker(gpu, ngpus_per_node, args):
         model.train(False)
     elif 'fpn' in args.arch:
         model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        args.iterations = 50
+        print("Will run ", args.iterations, " for this model.")
     else:
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
