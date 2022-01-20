@@ -67,6 +67,8 @@ model_all="alexnet,densenet121,densenet161,densenet169,densenet201,efficientnet_
 model_all="alexnet,densenet161,efficientnet_b2,fbnetc_100,googlenet,inception_v3,mnasnet1_0,resnet50,resnet34,resnext101_32x8d,shufflenet_v2_x0_5,spnasnet_100,squeezenet1_0,vgg16,wide_resnet50_2"
 # onednn acceptance test and stock pt nightly test model list
 model_all="resnet50,resnet34,resnext101_32x8d,mobilenet_v2,shufflenet_v2_x1_0,vgg11,fasterrcnn_resnet50_fpn,densenet161,inception_v3,alexnet"
+# debug
+model_all="mobilenet_v2"
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
