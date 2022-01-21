@@ -43,10 +43,15 @@ if [ ${precision} == "bfloat16" ];then
 precision_log="BF16"
 fi
 
+IPEX_OPTION=""
+if [ "use_ipex" == "yes" ]; then
+    IPEX_OPTION="--ipex"
+fi
+
 # imperative
 for model in ${MODEL_NAME_LIST[@]}
 do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --no-cuda --channels_last 1 2>&1 | tee ./logs/$model-imperative-$precision.log
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --no-cuda --channels_last 1 $IPEX_OPTION 2>&1 | tee ./logs/$model-imperative-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-imperative-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-imperative-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo broad_vision $model throughput_mode imperative $precision_log $bs $throughput | tee -a ./logs/summary.log
@@ -55,7 +60,7 @@ done
 # jit
 for model in ${MODEL_NAME_LIST[@]}
 do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --no-cuda --channels_last 1 2>&1 | tee ./logs/$model-jit-$precision.log
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --no-cuda --channels_last 1 $IPEX_OPTION 2>&1 | tee ./logs/$model-jit-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-jit-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo broad_vision $model throughput_mode jit $precision_log $bs $throughput | tee -a ./logs/summary.log
@@ -64,7 +69,7 @@ done
 # jit_optimize
 for model in ${MODEL_NAME_LIST[@]}
 do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda --channels_last 0 2>&1 | tee ./logs/$model-jit_optimize-$precision.log
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy -w 20 -i 500 -a $model -b $bs --precision $precision --jit --jit_optimize --no-cuda --channels_last 0 $IPEX_OPTION 2>&1 | tee ./logs/$model-jit_optimize-$precision.log
     latency=$(grep "inference latency:" ./logs/$model-jit_optimize-$precision.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-jit_optimize-$precision.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo broad_vision $model throughput_mode jit_optimize $precision_log $bs $throughput | tee -a ./logs/summary.log
