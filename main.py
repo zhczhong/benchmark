@@ -234,6 +234,7 @@ def main_worker(gpu, ngpus_per_node, args):
         model.train(False)
     elif 'fpn' in args.arch:
         model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        model.train(False)
         args.iterations = 20
         print("Will run only ", args.iterations, " iterations for this model.")
     else:
