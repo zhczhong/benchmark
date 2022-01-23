@@ -44,7 +44,7 @@ precision_log="BF16"
 fi
 
 IPEX_OPTION=""
-if [ "use_ipex" == "yes" ]; then
+if [ ${use_ipex} == "yes" ]; then
     IPEX_OPTION="--ipex"
 fi
 
