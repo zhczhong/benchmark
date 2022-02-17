@@ -482,7 +482,7 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
-            print("Running IPEX INT8 evalation step\n")
+            print("Running IPEX INT8 evaluation step ...\n")
             
         if args.precision == "bfloat16" and not args.cuda:
             print("Using CPU autocast ...")
