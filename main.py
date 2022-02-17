@@ -456,7 +456,7 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
             model = optimization.fuse(model)
-            print("runing int8 calibration step\n")
+            print("Running IPEX INT8 calibration step ...\n")
             conf = ipex.quantization.QuantConf(qscheme=torch.per_tensor_symmetric)
             with torch.no_grad():
                 for i in range(10):
@@ -468,7 +468,7 @@ def main_worker(gpu, ngpus_per_node, args):
                             images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
                         if args.to_mkldnn:
                             images = images.to_mkldnn()
-                        print(".........cooking config_for_ipex_int8.json..........")
+                        print(".........Cooking config_for_ipex_int8.json..........")
                         output = model(images)
                 conf.save("./config_for_ipex_int8.json")
                 print(".........calibration step done..........")
@@ -482,7 +482,7 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
-            print("running int8 evalation step\n")
+            print("Running IPEX INT8 evalation step\n")
             
         if args.precision == "bfloat16" and not args.cuda:
             print("Using CPU autocast ...")
