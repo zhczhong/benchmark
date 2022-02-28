@@ -455,7 +455,7 @@ def main_worker(gpu, ngpus_per_node, args):
             print("---- With JIT.optimize_for_inference enabled.")
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
-            model = optimization.fuse(model)
+            # model = optimization.fuse(model)
             print("Running IPEX INT8 calibration step ...\n")
             conf = ipex.quantization.QuantConf(qscheme=torch.per_tensor_symmetric)
             with torch.no_grad():
@@ -473,7 +473,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 conf.save("./config_for_ipex_int8.json")
                 print(".........calibration step done..........")
             
-            model = optimization.fuse(model, inplace=True)
+            # model = optimization.fuse(model, inplace=True)
             conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
             if args.channels_last:
                 x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
