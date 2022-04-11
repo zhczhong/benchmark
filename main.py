@@ -1,9 +1,3 @@
-"""
-Evaluate on ImageNet. Note that at the moment, training is not implemented (I am working on it).
-that being said, evaluation is working.
-"""
-
-# from PT.EfficientNet.efficientnet_pytorch.utils import efficientnet_params
 import argparse
 import os
 import random
@@ -222,7 +216,7 @@ def main_worker(gpu, ngpus_per_node, args):
             print("=> creating model '{}'".format(args.arch))
             model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
         model.train(False)
-    elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch:
+    elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch[0:4]:
         import pretrainedmodels
         import pretrainedmodels.utils
         if args.pretrained:
@@ -455,8 +449,7 @@ def main_worker(gpu, ngpus_per_node, args):
             print("---- With JIT.optimize_for_inference enabled.")
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
-            if 'efficientnet' not in args.arch and 'densenet' not in args.arch:
-                model = optimization.fuse(model)
+            model = optimization.fuse(model)
             print("Running IPEX INT8 calibration step ...\n")
             conf = ipex.quantization.QuantConf(qscheme=torch.per_tensor_symmetric)
             with torch.no_grad():
@@ -473,8 +466,7 @@ def main_worker(gpu, ngpus_per_node, args):
                         output = model(images)
                 conf.save("./config_for_ipex_int8.json")
                 print(".........calibration step done..........")
-            if 'efficientnet' not in args.arch and 'densenet' not in args.arch:
-                model = optimization.fuse(model, inplace=True)
+            model = optimization.fuse(model, inplace=True)
             conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
             if args.channels_last:
                 x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
