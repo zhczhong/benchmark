@@ -198,6 +198,8 @@ def main_worker(gpu, ngpus_per_node, args):
         import geffnet
         if args.jit:
             geffnet.config.set_scriptable(True)
+        if args.precision == "int8_ipex":
+            geffnet.config.set_scriptable(True)
         if args.pretrained:
             model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
             print("=> using pre-trained model '{}'".format(args.arch))

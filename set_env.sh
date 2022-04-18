@@ -1,8 +1,8 @@
 set -x
 
 # (CPU) install libiomp5.so and libjemalloc.so into conda env
-conda install -y mkl mkl-include
-conda install -y jemalloc
+# conda install -y mkl mkl-include
+# conda install -y jemalloc
 
 # init submodules
 git submodule sync
