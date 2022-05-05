@@ -671,7 +671,13 @@ def validate(val_loader, model, criterion, args):
                                     output = model(images)
                             else:
                                 output = model(images)
-
+                else:
+                    if args.profile:
+                        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                            output = model(images)
+                    else:
+                        output = model(images)
+                  
                 # measure elapsed time
                 if i >= warmup:
                     batch_time.update(time.time() - end)
