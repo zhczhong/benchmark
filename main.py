@@ -126,6 +126,8 @@ parser.add_argument('--config_file', type=str, default="./conf.yaml",
                     help='config file for int8 tune')
 parser.add_argument("--int8_mkldnn", action='store_true',
                     help="using int8_mkldnn engine")
+parser.add_argument("--torchdynamo_ipex", action='store_true',
+                    help="using torchdynamo with ipex backend")
 
 args = parser.parse_args()
 
@@ -651,11 +653,24 @@ def validate(val_loader, model, criterion, args):
                 if args.cuda:
                     target = target.cuda(args.gpu, non_blocking=True)
                 # compute output
-                if args.profile:
-                    with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
-                        output = model(images)
-                else:
-                    output = model(images)
+
+                if args.torchdynamo_ipex:
+                    import torchdynamo
+                    from torchdynamo.optimizations import backends
+                    if args.precision == "float32":
+                        with torchdynamo.optimize(backends.ipex_fp32), torch.no_grad():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
+                    if args.precision == "bfloat16":
+                        with torchdynamo.optimize(backends.ipex_bf16), torch.no_grad(), torch.cpu.amp.autocast():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
 
                 # measure elapsed time
                 if i >= warmup:
