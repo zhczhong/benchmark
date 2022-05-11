@@ -723,6 +723,7 @@ def validate(val_loader, model, criterion, args):
                     break
             print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
                   .format(top1=top1, top5=top5))
+            print("Accuracy: {top1.avg:.3f} ".format(top1=top1))
 
         if args.profile:
             import pathlib
