@@ -28,8 +28,8 @@ do
     --data ${DATASET_DIR} \
     -j 0 \
     -w 0 \
-    -a resnet50 \
-    -b 128 \
+    -a $model \
+    -b $batch_size \
     --precision "float32" --ipex --jit 2>&1 | tee ./logs/$model-IPEX-FP32-accuracy.log
   accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-FP32-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
   echo $model IPEX FP32 accuracy $accuracy | tee -a ./logs/summary.log
@@ -44,8 +44,8 @@ done
 #    --data ${DATASET_DIR} \
 #    -j 0 \
 #    -w 0 \
-#    -a resnet50 \
-#    -b 128 \
+#    -a $model \
+#    -b $batch_size \
 #    --precision "int8_ipex" --ipex --jit  2>&1 | tee ./logs/$model-IPEX-INT8-accuracy.log
 #    accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-INT8-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
 #    echo $model IPEX INT8 accuracy $accuracy | tee -a ./logs/summary.log
