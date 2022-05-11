@@ -296,6 +296,7 @@ def main_worker(gpu, ngpus_per_node, args):
         model_oob = model
         model_oob = model_oob.to(memory_format=torch.channels_last)
         model = model_oob
+        print("Using channels_last memory format")
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
     if args.ipex:
@@ -350,7 +351,7 @@ def main_worker(gpu, ngpus_per_node, args):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
 
-    if not args.dummy and args.data:
+    if not args.dummy and args.data and not args.evaluate:
         train_dataset = datasets.ImageFolder(
             traindir,
             transforms.Compose([
@@ -385,7 +386,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('Using image size', image_size)
     else:
         val_transforms = transforms.Compose([
-            transforms.Resize(args.image_size),
+            transforms.Resize(256),
             transforms.CenterCrop(args.image_size),
             transforms.ToTensor(),
             normalize,
@@ -393,7 +394,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('Using image size', args.image_size)
 
     val_loader = []
-    if not args.dummy and args.data:
+    if not args.dummy and args.data and args.evaluate:
         val_loader = torch.utils.data.DataLoader(
             datasets.ImageFolder(valdir, val_transforms),
             batch_size=args.batch_size, shuffle=False,
@@ -693,6 +694,8 @@ def validate(val_loader, model, criterion, args):
                         images = images.cuda(args.gpu, non_blocking=True)
                     if args.cuda:
                         target = target.cuda(args.gpu, non_blocking=True)
+                    if args.channels_last:
+                        images = images.contiguous(memory_format=torch.channels_last)
                     if args.precision == "bfloat16":
                         images = images.to(torch.bfloat16)
                         target = target.to(torch.bfloat16)
@@ -810,7 +813,7 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 

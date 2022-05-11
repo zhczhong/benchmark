@@ -1,0 +1,54 @@
+set -x
+cd gen-efficientnet-pytorch
+
+model_all="alexnet,densenet121,densenet161,densenet169,densenet201,efficientnet_b0,efficientnet_b1,efficientnet_b2,efficientnet_b3,efficientnet_b4,efficientnet_b5,efficientnet_b6,efficientnet_b7,efficientnet_b8,fbnetc_100,googlenet,inception_v3,mnasnet0_5,mnasnet1_0,resnet101,resnet152,resnet18,resnet34,resnet50,resnext101_32x8d,resnext50_32x4d,shufflenet_v2_x0_5,shufflenet_v2_x1_0,spnasnet_100,squeezenet1_0,squeezenet1_1,vgg11,vgg11_bn,vgg13,vgg13_bn,vgg16,vgg16_bn,vgg19,vgg19_bn,wide_resnet101_2,wide_resnet50_2"
+batch_size=${batch_size:-128}
+
+MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
+
+# export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
+export DATASET_DIR=${DATASET_DIR:-"/root/data/imagenet"}
+export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
+export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
+export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
+export KMP_AFFINITY="granularity=fine,compact,1,0"
+export KMP_BLOCKTIME=1
+export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
+export KMP_SETTINGS=1
+
+rm -rf logs
+mkdir logs
+
+# IPEX FP32 JIT
+for model in ${MODEL_NAME_LIST[@]}
+do
+  #numactl --cpunodebind=0 --membind=0 python \
+  python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator \
+  main.py -e --pretrained --no-cuda \
+    --data ${DATASET_DIR} \
+    -j 0 \
+    -w 0 \
+    -a resnet50 \
+    -b 128 \
+    --precision "float32" --ipex --jit 2>&1 | tee ./logs/$model-IPEX-FP32-accuracy.log
+  accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-FP32-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
+  echo $model IPEX FP32 accuracy $accuracy | tee -a ./logs/summary.log
+done
+
+## IPEX INT8
+#for model in ${MODEL_NAME_LIST[@]}
+#do
+#  #numactl --cpunodebind=0 --membind=0 python \
+#  python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator \
+#  main.py -e --pretrained --no-cuda \
+#    --data ${DATASET_DIR} \
+#    -j 0 \
+#    -w 0 \
+#    -a resnet50 \
+#    -b 128 \
+#    --precision "int8_ipex" --ipex --jit  2>&1 | tee ./logs/$model-IPEX-INT8-accuracy.log
+#    accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-INT8-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
+#    echo $model IPEX INT8 accuracy $accuracy | tee -a ./logs/summary.log
+#done
+
+cat ./logs/summary.log
