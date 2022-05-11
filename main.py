@@ -469,10 +469,7 @@ def main_worker(gpu, ngpus_per_node, args):
                             images = images.to_mkldnn()
                         print(".........Cooking config_for_ipex_int8.json..........")
                         output = model(images)
-                conf.save("./config_for_ipex_int8.json")
                 print(".........calibration step done..........")
-            model = optimization.fuse(model, inplace=True)
-            conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
             if args.channels_last:
                 x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
             else:
@@ -480,6 +477,9 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
+            with torch.no_grad():
+                y = model(x)
+                print(model.graph_for(x))
             print("Running IPEX INT8 evaluation step ...\n")
             
         if args.precision == "bfloat16" and not args.cuda:
