@@ -1,7 +1,22 @@
 set -x
 
-model_all="alexnet,densenet121,densenet161,densenet169,densenet201,efficientnet_b0,efficientnet_b1,efficientnet_b2,efficientnet_b3,efficientnet_b4,efficientnet_b5,efficientnet_b6,efficientnet_b7,efficientnet_b8,fbnetc_100,googlenet,inception_v3,mnasnet0_5,mnasnet1_0,resnet101,resnet152,resnet18,resnet34,resnet50,resnext101_32x8d,resnext50_32x4d,shufflenet_v2_x0_5,shufflenet_v2_x1_0,spnasnet_100,squeezenet1_0,squeezenet1_1,vgg11,vgg11_bn,vgg13,vgg13_bn,vgg16,vgg16_bn,vgg19,vgg19_bn,wide_resnet101_2,wide_resnet50_2"
-batch_size=80
+model_all=$1
+if [ ${model_all} == "all" ]; then
+    model_all="alexnet,densenet121,densenet161,densenet169,efficientnet_b0,efficientnet_b1,efficientnet_b2,efficientnet_b3,fbnetc_100,googlenet,inception_v3,mnasnet0_5,mnasnet1_0,resnet101,resnet152,resnet18,resnet34,resnet50,resnext101_32x8d,resnext50_32x4d,shufflenet_v2_x0_5,shufflenet_v2_x1_0,spnasnet_100,squeezenet1_0,squeezenet1_1,vgg11,vgg11_bn,vgg13,vgg13_bn,vgg16,vgg16_bn,vgg19,vgg19_bn,wide_resnet101_2,wide_resnet50_2"
+fi
+precision=$2 # Note: float32, bfloat16, int8_ipex
+batch_size=$3
+profile=$4 # Note: profile, null
+additional_options=""
+if [ ${profile} == "profile" ]; then
+    additional_options="${additional_options}  --profile "
+fi
+if [ ${precision} == "float32" ]; then
+    additional_options="${additional_options}  --jit "
+fi
+if [ ${profile} == "bfloat16" ]; then
+    additional_options="${additional_options}  --jit "
+fi
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 
@@ -17,22 +32,13 @@ export KMP_SETTINGS=1
 rm -rf logs
 mkdir logs
 
-# # IPEX FP32
-# for model in ${MODEL_NAME_LIST[@]}
-# do
-    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision "float32" --ipex --jit 2>&1 | tee ./logs/$model-IPEX-FP32.log
-    # latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
-    # throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    # echo $model IPEX FP32 $latency $throughput | tee -a ./logs/summary.log
-# done
-
-# # IPEX INT8
-# for model in ${MODEL_NAME_LIST[@]}
-# do
-    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision "int8_ipex" --ipex 2>&1 | tee ./logs/$model-IPEX-INT8.log
-    # latency=$(grep "inference latency:" ./logs/$model-IPEX-INT8.log | sed -e 's/.*latency//;s/[^0-9.]//g')
-    # throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-INT8.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    # echo $model IPEX INT8 $throughput | tee -a ./logs/summary.log
-# done
+# IPEX
+for model in ${MODEL_NAME_LIST[@]}
+do
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --ipex ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
+    throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
+    echo ${model} IPEX ${precision} ${latency} ${throughput} | tee -a ./logs/summary.log
+done
 
 cat ./logs/summary.log
