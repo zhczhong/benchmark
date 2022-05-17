@@ -298,7 +298,7 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.channels_last:
         model = model.to(memory_format=torch.channels_last)
     if args.fx:
-        model = optimization.fuse(model, inplace=inplace)
+        model = optimization.fuse(model, inplace=True)
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
     if args.ipex:
