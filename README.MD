@@ -7,7 +7,7 @@ bash set_env.sh
 
 ### Quickstart
 ```
-python ./gen-efficientnet-pytorch/main.py \
+python main.py \
       -e \
       --performance \
       --pretrained \
