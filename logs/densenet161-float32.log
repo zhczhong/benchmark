@@ -1,0 +1,110 @@
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS: value is not defined
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+/root/miniconda3/envs/ipex111/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: libc10_cuda.so: cannot open shared object file: No such file or directory
+  warn(f"Failed to load image Python extension: {e}")
+Downloading: "https://download.pytorch.org/models/densenet161-8d451a50.pth" to /root/.cache/torch/hub/checkpoints/densenet161-8d451a50.pth
+  0%|          | 0.00/110M [00:00<?, ?B/s]  0%|          | 40.0k/110M [00:00<06:11, 311kB/s]  0%|          | 104k/110M [00:00<04:14, 455kB/s]   0%|          | 208k/110M [00:00<02:47, 690kB/s]  0%|          | 376k/110M [00:00<01:48, 1.06MB/s]  1%|          | 656k/110M [00:00<01:08, 1.68MB/s]  1%|          | 1.13M/110M [00:00<00:40, 2.82MB/s]  2%|▏         | 1.98M/110M [00:00<00:24, 4.73MB/s]  3%|▎         | 3.43M/110M [00:00<00:14, 8.00MB/s]  5%|▌         | 5.94M/110M [00:00<00:08, 13.6MB/s]  9%|▉         | 10.1M/110M [00:01<00:04, 22.8MB/s] 15%|█▍        | 16.2M/110M [00:01<00:02, 35.3MB/s] 20%|██        | 22.5M/110M [00:01<00:02, 44.4MB/s] 26%|██▌       | 28.8M/110M [00:01<00:01, 50.9MB/s] 32%|███▏      | 34.8M/110M [00:01<00:01, 53.3MB/s] 37%|███▋      | 40.9M/110M [00:01<00:01, 54.9MB/s] 42%|████▏     | 46.7M/110M [00:01<00:01, 55.9MB/s] 47%|████▋     | 52.3M/110M [00:01<00:01, 56.8MB/s] 53%|█████▎    | 58.3M/110M [00:01<00:00, 57.6MB/s] 58%|█████▊    | 64.1M/110M [00:01<00:00, 56.6MB/s] 63%|██████▎   | 70.0M/110M [00:02<00:00, 57.9MB/s] 69%|██████▉   | 76.0M/110M [00:02<00:00, 57.9MB/s] 74%|███████▍  | 81.5M/110M [00:02<00:00, 56.4MB/s] 80%|███████▉  | 87.9M/110M [00:02<00:00, 58.8MB/s] 85%|████████▌ | 94.1M/110M [00:02<00:00, 60.4MB/s] 91%|█████████ | 100M/110M [00:02<00:00, 60.2MB/s]  96%|█████████▌| 106M/110M [00:02<00:00, 60.7MB/s]100%|██████████| 110M/110M [00:02<00:00, 41.5MB/s]
+Namespace(data='', arch='densenet161', workers=1, epochs=90, start_epoch=0, batch_size=56, lr=0.1, momentum=0.9, weight_decay=0.0001, print_freq=10, resume='', evaluate=True, pretrained=True, world_size=-1, rank=-1, ppn=1, dist_url='tcp://224.66.41.62:23456', dist_backend='nccl', seed=None, gpu=None, image_size=224, advprop=False, multiprocessing_distributed=False, ipex=False, jit=False, jit_optimize=False, llga=False, precision='float32', no_cuda=True, iterations=100, warmup_iterations=10, profile=False, performance=True, dummy=True, num_classes=1000, channels_last=1, to_mkldnn=0, config_file='./conf.yaml', int8_mkldnn=False, torchdynamo_ipex=False, fx=False)
+=> using pre-trained model 'densenet161'
+Using image size 224
+Test: [0/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [10/0]	Time  0.668 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [20/0]	Time  0.668 ( 0.667)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [30/0]	Time  0.669 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [40/0]	Time  0.669 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [50/0]	Time  0.667 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [60/0]	Time  0.668 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [70/0]	Time  0.671 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [80/0]	Time  0.670 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [90/0]	Time  0.671 ( 0.668)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [100/0]	Time  0.670 ( 0.669)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+inference latency: 11.939 ms
+inference Throughput: 83.762 fps

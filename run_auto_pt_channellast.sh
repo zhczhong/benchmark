@@ -7,7 +7,7 @@ fi
 precision=$2
 batch_size=$3
 profile=$4
-additional_options=""
+additional_options=$5
 if [ ${profile} == "profile" ]; then
     additional_options="${additional_options}  --profile "
 fi
@@ -26,31 +26,31 @@ export KMP_SETTINGS=1
 rm -rf logs
 mkdir logs
 
-# NCHW
-for model in ${MODEL_NAME_LIST[@]}
-do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 0 ${additional_options} 2>&1 | tee ./logs/${model}-FP32.log
-    latency=$(grep "inference latency:" ./logs/${model}-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
-    throughput=$(grep "inference Throughput:" ./logs/${model}-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo ${model} NCHW ${precision} ${throughput} | tee -a ./logs/summary.log
-done
+# # NCHW
+# for model in ${MODEL_NAME_LIST[@]}
+# do
+    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 0 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    # latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
+    # throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
+    # echo ${model} NCHW ${precision} ${throughput} | tee -a ./logs/summary.log
+# done
 
 # NHWC
 for model in ${MODEL_NAME_LIST[@]}
 do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 1 ${additional_options} 2>&1 | tee ./logs/${model}-FP32.log
-    latency=$(grep "inference latency:" ./logs/${model}-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
-    throughput=$(grep "inference Throughput:" ./logs/${model}-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 1 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
+    throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo ${model} NHWC ${precision} ${throughput} | tee -a ./logs/summary.log
 done
 
-# NCHW + opt_for_inference
-for model in ${MODEL_NAME_LIST[@]}
-do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision}  --channels_last 0 --jit --jit_optimize ${additional_options} 2>&1 | tee ./logs/${model}-FP32.log
-    latency=$(grep "inference latency:" ./logs/${model}-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
-    throughput=$(grep "inference Throughput:" ./logs/${model}-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo ${model} JIT_OFI ${precision} ${throughput} | tee -a ./logs/summary.log
-done
+# # NCHW + opt_for_inference
+# for model in ${MODEL_NAME_LIST[@]}
+# do
+    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision}  --channels_last 0 --jit --jit_optimize ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    # latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
+    # throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
+    # echo ${model} JIT_OFI ${precision} ${throughput} | tee -a ./logs/summary.log
+# done
 
 cat ./logs/summary.log
