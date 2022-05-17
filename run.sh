@@ -1,4 +1,5 @@
 set -x
+
 bash run_auto_pt_channellast.sh all float32 56
 cat ./logs/summary.log
 bash run_auto_pt_channellast.sh all bfloat16_brutal 56
