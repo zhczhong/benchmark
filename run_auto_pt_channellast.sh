@@ -2,7 +2,6 @@ set -x
 cd gen-efficientnet-pytorch
 
 model_all="alexnet,densenet121,densenet161,densenet169,efficientnet_b0,efficientnet_b1,efficientnet_b2,efficientnet_b3,fbnetc_100,googlenet,inception_v3,mnasnet0_5,mnasnet1_0,resnet101,resnet152,resnet18,resnet34,resnet50,resnext101_32x8d,resnext50_32x4d,shufflenet_v2_x0_5,shufflenet_v2_x1_0,spnasnet_100,squeezenet1_0,squeezenet1_1,vgg11,vgg11_bn,vgg13,vgg13_bn,vgg16,vgg16_bn,vgg19,vgg19_bn,wide_resnet101_2,wide_resnet50_2"
-model_all="efficientnet_b0"
 batch_size=80
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
@@ -25,7 +24,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision "float32" --channels_last 0  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model IPEX_NCHW FP32 $throughput | tee -a ./logs/summary.log
+    echo $model NCHW FP32 $throughput | tee -a ./logs/summary.log
 done
 
 # NHWC
@@ -34,7 +33,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision "float32" --channels_last 1  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model IPEX_NHWC FP32 $throughput | tee -a ./logs/summary.log
+    echo $model NHWC FP32 $throughput | tee -a ./logs/summary.log
 done
 
 # NCHW + opt_for_inference
@@ -43,7 +42,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision "float32"  --channels_last 0 --jit --jit_optimize  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model IPEX_opt_for_inf FP32 $throughput | tee -a ./logs/summary.log
+    echo $model JIT_OFI FP32 $throughput | tee -a ./logs/summary.log
 done
 
 cat ./logs/summary.log
