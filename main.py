@@ -198,6 +198,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if 'efficientnet' in args.arch:  # NEW
         import geffnet
+        geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
         if args.jit:
             geffnet.config.set_scriptable(True)
         if args.precision == "int8_ipex":
