@@ -1,110 +1,0 @@
-
-User settings:
-
-   KMP_AFFINITY=granularity=fine,compact,1,0
-   KMP_BLOCKTIME=1
-   KMP_SETTINGS=1
-
-Effective settings:
-
-   KMP_ABORT_DELAY=0
-   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
-   KMP_ALIGN_ALLOC=64
-   KMP_ALL_THREADPRIVATE=448
-   KMP_ATOMIC_MODE=2
-   KMP_BLOCKTIME=1
-   KMP_CPUINFO_FILE: value is not defined
-   KMP_DETERMINISTIC_REDUCTION=false
-   KMP_DEVICE_THREAD_LIMIT=2147483647
-   KMP_DISP_HAND_THREAD=false
-   KMP_DISP_NUM_BUFFERS=7
-   KMP_DUPLICATE_LIB_OK=false
-   KMP_ENABLE_TASK_THROTTLING=true
-   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
-   KMP_FORCE_REDUCTION: value is not defined
-   KMP_FOREIGN_THREADS_THREADPRIVATE=true
-   KMP_FORKJOIN_BARRIER='2,2'
-   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
-   KMP_FORKJOIN_FRAMES=true
-   KMP_FORKJOIN_FRAMES_MODE=3
-   KMP_GTID_MODE=3
-   KMP_HANDLE_SIGNALS=false
-   KMP_HOT_TEAMS_MAX_LEVEL=1
-   KMP_HOT_TEAMS_MODE=0
-   KMP_INIT_AT_FORK=true
-   KMP_ITT_PREPARE_DELAY=0
-   KMP_LIBRARY=throughput
-   KMP_LOCK_KIND=tas
-   KMP_MALLOC_POOL_INCR=1M
-   KMP_MWAIT_HINTS=0
-   KMP_NESTING_MODE=0
-   KMP_NUM_LOCKS_IN_BLOCK=1
-   KMP_PLAIN_BARRIER='2,2'
-   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
-   KMP_REDUCTION_BARRIER='1,1'
-   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
-   KMP_SCHEDULE='static,balanced;guided,iterative'
-   KMP_SETTINGS=true
-   KMP_SPIN_BACKOFF_PARAMS='4096,100'
-   KMP_STACKOFFSET=64
-   KMP_STACKPAD=0
-   KMP_STACKSIZE=8M
-   KMP_STORAGE_MAP=false
-   KMP_TASKING=2
-   KMP_TASKLOOP_MIN_TASKS=0
-   KMP_TASK_STEALING_CONSTRAINT=1
-   KMP_TEAMS_PROC_BIND=spread
-   KMP_TEAMS_THREAD_LIMIT=112
-   KMP_TOPOLOGY_METHOD=all
-   KMP_USER_LEVEL_MWAIT=false
-   KMP_USE_YIELD=1
-   KMP_VERSION=false
-   KMP_WARNINGS=true
-   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
-   LIBOMP_USE_HIDDEN_HELPER_TASK=false
-   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
-   OMP_ALLOCATOR=omp_default_mem_alloc
-   OMP_CANCELLATION=false
-   OMP_DEBUG=disabled
-   OMP_DEFAULT_DEVICE=0
-   OMP_DISPLAY_AFFINITY=false
-   OMP_DISPLAY_ENV=false
-   OMP_DYNAMIC=false
-   OMP_MAX_ACTIVE_LEVELS=1
-   OMP_MAX_TASK_PRIORITY=0
-   OMP_NESTED: deprecated; max-active-levels-var=1
-   OMP_NUM_TEAMS=0
-   OMP_NUM_THREADS: value is not defined
-   OMP_PLACES='threads'
-   OMP_PROC_BIND='intel'
-   OMP_SCHEDULE='static'
-   OMP_STACKSIZE=8M
-   OMP_TARGET_OFFLOAD=DEFAULT
-   OMP_TEAMS_THREAD_LIMIT=0
-   OMP_THREAD_LIMIT=2147483647
-   OMP_TOOL=enabled
-   OMP_TOOL_LIBRARIES: value is not defined
-   OMP_TOOL_VERBOSE_INIT: value is not defined
-   OMP_WAIT_POLICY=PASSIVE
-   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
-
-/root/miniconda3/envs/ipex111/lib/python3.9/site-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: libc10_cuda.so: cannot open shared object file: No such file or directory
-  warn(f"Failed to load image Python extension: {e}")
-Downloading: "https://download.pytorch.org/models/densenet121-a639ec97.pth" to /root/.cache/torch/hub/checkpoints/densenet121-a639ec97.pth
-  0%|          | 0.00/30.8M [00:00<?, ?B/s]  0%|          | 8.00k/30.8M [00:00<13:17, 40.5kB/s]  0%|          | 40.0k/30.8M [00:00<04:17, 125kB/s]   0%|          | 64.0k/30.8M [00:00<06:16, 85.8kB/s]  0%|          | 80.0k/30.8M [00:00<06:37, 81.2kB/s]  1%|          | 224k/30.8M [00:01<01:36, 332kB/s]    1%|          | 288k/30.8M [00:01<02:54, 184kB/s]  2%|▏         | 552k/30.8M [00:02<01:17, 410kB/s]  2%|▏         | 632k/30.8M [00:02<02:04, 254kB/s]  3%|▎         | 880k/30.8M [00:02<01:14, 423kB/s]  4%|▍         | 1.24M/30.8M [00:03<00:38, 804kB/s]  5%|▍         | 1.41M/30.8M [00:03<00:49, 626kB/s]  5%|▌         | 1.55M/30.8M [00:03<00:46, 656kB/s]  6%|▌         | 1.74M/30.8M [00:03<00:37, 806kB/s]  6%|▌         | 1.91M/30.8M [00:03<00:32, 942kB/s]  7%|▋         | 2.05M/30.8M [00:04<00:42, 713kB/s]  7%|▋         | 2.20M/30.8M [00:04<00:51, 586kB/s]  9%|▊         | 2.65M/30.8M [00:04<00:27, 1.06MB/s] 10%|▉         | 2.96M/30.8M [00:05<00:24, 1.21MB/s] 11%|█         | 3.29M/30.8M [00:05<00:22, 1.28MB/s] 12%|█▏        | 3.63M/30.8M [00:05<00:19, 1.44MB/s] 12%|█▏        | 3.80M/30.8M [00:05<00:25, 1.10MB/s] 14%|█▍        | 4.27M/30.8M [00:06<00:23, 1.21MB/s] 15%|█▌        | 4.73M/30.8M [00:06<00:21, 1.29MB/s] 17%|█▋        | 5.12M/30.8M [00:06<00:20, 1.32MB/s] 18%|█▊        | 5.48M/30.8M [00:07<00:19, 1.36MB/s] 19%|█▉        | 5.82M/30.8M [00:07<00:19, 1.35MB/s] 20%|█▉        | 6.10M/30.8M [00:07<00:18, 1.37MB/s] 20%|██        | 6.29M/30.8M [00:07<00:19, 1.35MB/s] 22%|██▏       | 6.89M/30.8M [00:07<00:13, 1.92MB/s] 23%|██▎       | 7.09M/30.8M [00:07<00:14, 1.69MB/s] 24%|██▎       | 7.30M/30.8M [00:08<00:15, 1.55MB/s] 24%|██▍       | 7.46M/30.8M [00:08<00:16, 1.47MB/s] 25%|██▍       | 7.60M/30.8M [00:08<00:26, 935kB/s]  25%|██▌       | 7.73M/30.8M [00:08<00:24, 991kB/s] 26%|██▌       | 8.04M/30.8M [00:09<00:23, 1.03MB/s] 26%|██▋       | 8.17M/30.8M [00:09<00:22, 1.05MB/s] 28%|██▊       | 8.64M/30.8M [00:09<00:14, 1.64MB/s] 29%|██▊       | 8.83M/30.8M [00:09<00:14, 1.60MB/s] 29%|██▉       | 9.00M/30.8M [00:09<00:23, 988kB/s]  30%|██▉       | 9.13M/30.8M [00:10<00:23, 982kB/s] 31%|███       | 9.53M/30.8M [00:10<00:14, 1.51MB/s] 32%|███▏      | 9.73M/30.8M [00:10<00:13, 1.59MB/s] 32%|███▏      | 9.93M/30.8M [00:10<00:16, 1.33MB/s] 33%|███▎      | 10.1M/30.8M [00:10<00:17, 1.26MB/s] 33%|███▎      | 10.2M/30.8M [00:11<00:24, 886kB/s]  34%|███▍      | 10.5M/30.8M [00:11<00:41, 520kB/s] 37%|███▋      | 11.3M/30.8M [00:12<00:17, 1.20MB/s] 37%|███▋      | 11.5M/30.8M [00:12<00:18, 1.08MB/s] 38%|███▊      | 11.7M/30.8M [00:12<00:21, 917kB/s]  40%|███▉      | 12.2M/30.8M [00:13<00:19, 1.02MB/s] 42%|████▏     | 13.0M/30.8M [00:13<00:17, 1.09MB/s] 44%|████▍     | 13.7M/30.8M [00:14<00:13, 1.33MB/s] 45%|████▌     | 14.0M/30.8M [00:14<00:15, 1.14MB/s] 46%|████▌     | 14.2M/30.8M [00:14<00:15, 1.12MB/s] 48%|████▊     | 14.8M/30.8M [00:15<00:13, 1.25MB/s] 49%|████▉     | 15.2M/30.8M [00:15<00:13, 1.20MB/s] 51%|█████     | 15.7M/30.8M [00:15<00:11, 1.44MB/s] 52%|█████▏    | 15.9M/30.8M [00:16<00:11, 1.37MB/s] 52%|█████▏    | 16.1M/30.8M [00:16<00:20, 745kB/s]  55%|█████▍    | 16.9M/30.8M [00:16<00:10, 1.41MB/s] 56%|█████▌    | 17.2M/30.8M [00:17<00:08, 1.60MB/s] 57%|█████▋    | 17.5M/30.8M [00:17<00:09, 1.45MB/s] 58%|█████▊    | 17.8M/30.8M [00:17<00:13, 1.04MB/s] 59%|█████▊    | 18.1M/30.8M [00:18<00:13, 1.03MB/s] 60%|█████▉    | 18.5M/30.8M [00:18<00:10, 1.22MB/s] 60%|██████    | 18.6M/30.8M [00:18<00:12, 1.04MB/s] 61%|██████    | 18.8M/30.8M [00:18<00:11, 1.08MB/s] 61%|██████▏   | 18.9M/30.8M [00:19<00:12, 1.01MB/s] 62%|██████▏   | 19.0M/30.8M [00:19<00:12, 960kB/s]  62%|██████▏   | 19.2M/30.8M [00:19<00:13, 909kB/s] 63%|██████▎   | 19.4M/30.8M [00:19<00:13, 912kB/s] 63%|██████▎   | 19.5M/30.8M [00:19<00:13, 891kB/s] 63%|██████▎   | 19.6M/30.8M [00:19<00:17, 678kB/s] 64%|██████▍   | 19.8M/30.8M [00:20<00:12, 931kB/s] 65%|██████▍   | 19.9M/30.8M [00:20<00:12, 926kB/s] 65%|██████▍   | 20.0M/30.8M [00:20<00:16, 688kB/s] 65%|██████▌   | 20.1M/30.8M [00:21<00:30, 369kB/s] 67%|██████▋   | 20.5M/30.8M [00:21<00:15, 685kB/s] 67%|██████▋   | 20.8M/30.8M [00:21<00:11, 896kB/s] 68%|██████▊   | 21.0M/30.8M [00:21<00:12, 862kB/s] 68%|██████▊   | 21.1M/30.8M [00:22<00:13, 735kB/s] 70%|██████▉   | 21.5M/30.8M [00:22<00:11, 888kB/s] 71%|███████   | 21.8M/30.8M [00:22<00:08, 1.13MB/s] 71%|███████   | 21.9M/30.8M [00:22<00:08, 1.08MB/s] 72%|███████▏  | 22.1M/30.8M [00:23<00:14, 654kB/s]  72%|███████▏  | 22.2M/30.8M [00:23<00:14, 614kB/s] 73%|███████▎  | 22.5M/30.8M [00:24<00:12, 699kB/s] 74%|███████▍  | 22.8M/30.8M [00:24<00:09, 934kB/s] 74%|███████▍  | 22.9M/30.8M [00:24<00:11, 716kB/s] 76%|███████▌  | 23.4M/30.8M [00:24<00:06, 1.19MB/s] 77%|███████▋  | 23.6M/30.8M [00:25<00:08, 873kB/s]  77%|███████▋  | 23.7M/30.8M [00:25<00:08, 874kB/s] 78%|███████▊  | 24.0M/30.8M [00:25<00:06, 1.09MB/s] 78%|███████▊  | 24.1M/30.8M [00:25<00:06, 1.14MB/s] 79%|███████▊  | 24.3M/30.8M [00:25<00:07, 952kB/s]  79%|███████▉  | 24.4M/30.8M [00:25<00:06, 969kB/s] 79%|███████▉  | 24.5M/30.8M [00:26<00:07, 884kB/s] 80%|███████▉  | 24.6M/30.8M [00:26<00:07, 878kB/s] 80%|████████  | 24.7M/30.8M [00:26<00:07, 850kB/s] 81%|████████  | 24.9M/30.8M [00:26<00:10, 593kB/s] 81%|████████▏ | 25.1M/30.8M [00:26<00:09, 672kB/s] 82%|████████▏ | 25.1M/30.8M [00:27<00:10, 553kB/s] 83%|████████▎ | 25.5M/30.8M [00:27<00:08, 655kB/s] 83%|████████▎ | 25.6M/30.8M [00:27<00:09, 606kB/s] 83%|████████▎ | 25.7M/30.8M [00:28<00:09, 567kB/s] 84%|████████▍ | 25.9M/30.8M [00:28<00:07, 715kB/s] 84%|████████▍ | 26.0M/30.8M [00:28<00:08, 599kB/s] 84%|████████▍ | 26.1M/30.8M [00:28<00:10, 496kB/s] 85%|████████▌ | 26.3M/30.8M [00:29<00:07, 657kB/s] 86%|████████▌ | 26.4M/30.8M [00:29<00:08, 524kB/s] 86%|████████▌ | 26.5M/30.8M [00:29<00:08, 549kB/s] 86%|████████▋ | 26.6M/30.8M [00:29<00:07, 599kB/s] 87%|████████▋ | 26.8M/30.8M [00:29<00:06, 651kB/s] 87%|████████▋ | 27.0M/30.8M [00:30<00:05, 709kB/s] 89%|████████▊ | 27.4M/30.8M [00:30<00:03, 1.06MB/s] 89%|████████▉ | 27.5M/30.8M [00:30<00:03, 1.01MB/s] 89%|████████▉ | 27.6M/30.8M [00:31<00:06, 538kB/s]  90%|█████████ | 27.8M/30.8M [00:31<00:04, 678kB/s] 91%|█████████ | 28.0M/30.8M [00:31<00:03, 915kB/s] 91%|█████████ | 28.1M/30.8M [00:32<00:05, 479kB/s] 93%|█████████▎| 28.6M/30.8M [00:32<00:02, 866kB/s] 93%|█████████▎| 28.7M/30.8M [00:32<00:02, 826kB/s] 94%|█████████▎| 28.9M/30.8M [00:32<00:02, 776kB/s] 94%|█████████▍| 29.0M/30.8M [00:33<00:02, 738kB/s] 94%|█████████▍| 29.1M/30.8M [00:33<00:02, 739kB/s] 95%|█████████▍| 29.2M/30.8M [00:33<00:02, 775kB/s] 95%|█████████▍| 29.3M/30.8M [00:33<00:02, 804kB/s] 95%|█████████▌| 29.4M/30.8M [00:33<00:02, 701kB/s] 96%|█████████▌| 29.6M/30.8M [00:33<00:01, 1.01MB/s] 96%|█████████▋| 29.7M/30.8M [00:33<00:01, 768kB/s]  97%|█████████▋| 29.8M/30.8M [00:34<00:01, 686kB/s] 97%|█████████▋| 29.9M/30.8M [00:34<00:02, 437kB/s] 98%|█████████▊| 30.1M/30.8M [00:34<00:01, 525kB/s] 98%|█████████▊| 30.3M/30.8M [00:35<00:00, 752kB/s] 99%|█████████▉| 30.5M/30.8M [00:35<00:00, 741kB/s] 99%|█████████▉| 30.6M/30.8M [00:35<00:00, 727kB/s]100%|█████████▉| 30.8M/30.8M [00:36<00:00, 462kB/s]100%|██████████| 30.8M/30.8M [00:36<00:00, 889kB/s]
-Namespace(data='', arch='densenet121', workers=1, epochs=90, start_epoch=0, batch_size=56, lr=0.1, momentum=0.9, weight_decay=0.0001, print_freq=10, resume='', evaluate=True, pretrained=True, world_size=-1, rank=-1, ppn=1, dist_url='tcp://224.66.41.62:23456', dist_backend='nccl', seed=None, gpu=None, image_size=224, advprop=False, multiprocessing_distributed=False, ipex=False, jit=False, jit_optimize=False, llga=False, precision='float32', no_cuda=True, iterations=100, warmup_iterations=10, profile=False, performance=True, dummy=True, num_classes=1000, channels_last=1, to_mkldnn=0, config_file='./conf.yaml', int8_mkldnn=False, torchdynamo_ipex=False, fx=False)
-=> using pre-trained model 'densenet121'
-Using image size 224
-Test: [0/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [10/0]	Time  0.311 ( 0.311)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [20/0]	Time  0.309 ( 0.309)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [30/0]	Time  0.308 ( 0.309)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [40/0]	Time  0.309 ( 0.309)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [50/0]	Time  0.309 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [60/0]	Time  0.313 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [70/0]	Time  0.308 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [80/0]	Time  0.308 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [90/0]	Time  0.309 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-Test: [100/0]	Time  0.311 ( 0.310)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
-inference latency: 5.528 ms
-inference Throughput: 180.892 fps
