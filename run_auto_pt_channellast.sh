@@ -25,7 +25,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision ${precision} --channels_last 0  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model NCHW FP32 $throughput | tee -a ./logs/summary.log
+    echo $model NCHW $precision $throughput | tee -a ./logs/summary.log
 done
 
 # NHWC
@@ -34,7 +34,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision ${precision} --channels_last 1  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model NHWC FP32 $throughput | tee -a ./logs/summary.log
+    echo $model NHWC $precision $throughput | tee -a ./logs/summary.log
 done
 
 # NCHW + opt_for_inference
@@ -43,7 +43,7 @@ do
     numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 20 -i 100 -a $model -b ${batch_size} --precision ${precision}  --channels_last 0 --jit --jit_optimize  2>&1 | tee ./logs/$model-IPEX-FP32.log
     latency=$(grep "inference latency:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/$model-IPEX-FP32.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
-    echo $model JIT_OFI FP32 $throughput | tee -a ./logs/summary.log
+    echo $model JIT_OFI $precision $throughput | tee -a ./logs/summary.log
 done
 
 cat ./logs/summary.log
