@@ -25,7 +25,7 @@ mkdir logs
 # # NCHW
 # for model in ${MODEL_NAME_LIST[@]}
 # do
-    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 0 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 50 -i 500 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 0 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
     # latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     # throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     # echo ${model} NCHW ${precision} ${throughput} | tee -a ./logs/summary.log
@@ -34,7 +34,7 @@ mkdir logs
 # NHWC
 for model in ${MODEL_NAME_LIST[@]}
 do
-    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 1 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 50 -i 500 -a ${model} -b ${batch_size} --precision ${precision} --channels_last 1 ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
     latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     echo ${model} NHWC ${precision} ${throughput} | tee -a ./logs/summary.log
@@ -43,7 +43,7 @@ done
 # # NCHW + opt_for_inference
 # for model in ${MODEL_NAME_LIST[@]}
 # do
-    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 10 -i 100 -a ${model} -b ${batch_size} --precision ${precision}  --channels_last 0 --jit --jit_optimize ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
+    # numactl --cpunodebind=0 --membind=0 python main.py -e --performance --pretrained --dummy --no-cuda -j 1 -w 50 -i 500 -a ${model} -b ${batch_size} --precision ${precision}  --channels_last 0 --jit --jit_optimize ${additional_options} 2>&1 | tee ./logs/${model}-${precision}.log
     # latency=$(grep "inference latency:" ./logs/${model}-${precision}.log | sed -e 's/.*latency//;s/[^0-9.]//g')
     # throughput=$(grep "inference Throughput:" ./logs/${model}-${precision}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g')
     # echo ${model} JIT_OFI ${precision} ${throughput} | tee -a ./logs/summary.log

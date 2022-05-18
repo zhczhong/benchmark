@@ -1,0 +1,275 @@
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=896
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=queuing
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=224
+   KMP_TOPOLOGY_METHOD=all
+   KMP_TPAUSE=0
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS: value is not defined
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=896
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=queuing
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=224
+   KMP_TOPOLOGY_METHOD=all
+   KMP_TPAUSE=0
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS: value is not defined
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+ERROR:2022-05-18 17:32:54 2454891:2454891 CudaDeviceProperties.cpp:26] cudaGetDeviceCount failed with code 35
+Running with IPEX...
+Namespace(data='', arch='resnet18', workers=1, epochs=90, start_epoch=0, batch_size=112, lr=0.1, momentum=0.9, weight_decay=0.0001, print_freq=10, resume='', evaluate=True, pretrained=True, world_size=-1, rank=-1, ppn=1, dist_url='tcp://224.66.41.62:23456', dist_backend='nccl', seed=None, gpu=None, image_size=224, advprop=False, multiprocessing_distributed=False, ipex=True, jit=True, jit_optimize=False, llga=False, precision='float32', no_cuda=True, iterations=500, warmup_iterations=50, profile=True, performance=True, dummy=True, num_classes=1000, channels_last=1, to_mkldnn=0, config_file='./conf.yaml', int8_mkldnn=False, torchdynamo_ipex=False, fx=True, torchdynamo_fx=False)
+=> using pre-trained model 'resnet18'
+Running Channel Last
+Running FX
+Running with IPEX float32...
+Using image size 224
+---- With JIT enabled.
+Test: [0/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [10/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [20/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [30/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [40/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [50/0]	Time  0.088 ( 0.088)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [60/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [70/0]	Time  0.090 ( 0.089)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [80/0]	Time  0.092 ( 0.091)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [90/0]	Time  0.086 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [100/0]	Time  0.090 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [110/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [120/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [130/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [140/0]	Time  0.088 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [150/0]	Time  0.089 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [160/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [170/0]	Time  0.090 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [180/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [190/0]	Time  0.089 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [200/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [210/0]	Time  0.086 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [220/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [230/0]	Time  0.089 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [240/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [250/0]	Time  0.086 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [260/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [270/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [280/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [290/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [300/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [310/0]	Time  0.090 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [320/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [330/0]	Time  0.089 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [340/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [350/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [360/0]	Time  0.090 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [370/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [380/0]	Time  0.086 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [390/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [400/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [410/0]	Time  0.088 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [420/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [430/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [440/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [450/0]	Time  0.094 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [460/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [470/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [480/0]	Time  0.093 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [490/0]	Time  0.092 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [500/0]	Time  0.091 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [510/0]	Time  0.087 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [520/0]	Time  0.088 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [530/0]	Time  0.090 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [540/0]	Time  0.094 ( 0.090)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+-----------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                         Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+-----------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                      forward        99.33%      84.771ms       100.00%      85.346ms      85.346ms             1  
+                  aten::addmm         0.17%     143.000us         0.22%     187.000us     187.000us             1  
+                  aten::empty         0.11%      94.000us         0.11%      94.000us       6.714us            14  
+                    aten::sum         0.10%      82.000us         0.15%     124.000us     124.000us             1  
+                  aten::copy_         0.06%      52.000us         0.06%      52.000us      26.000us             2  
+                   aten::div_         0.06%      51.000us         0.10%      87.000us      87.000us             1  
+                  aten::fill_         0.04%      37.000us         0.04%      37.000us      37.000us             1  
+         aten::_reshape_alias         0.02%      15.000us         0.02%      15.000us      15.000us             1  
+                   aten::mean         0.02%      14.000us         0.26%     225.000us     225.000us             1  
+    aten::adaptive_avg_pool2d         0.02%      13.000us         0.29%     245.000us     245.000us             1  
+               aten::_to_copy         0.01%      12.000us         0.04%      32.000us      32.000us             1  
+                 aten::linear         0.01%      11.000us         0.25%     216.000us     216.000us             1  
+                aten::flatten         0.01%      10.000us         0.03%      25.000us      25.000us             1  
+                      aten::t         0.01%       9.000us         0.02%      18.000us      18.000us             1  
+          aten::empty_strided         0.01%       7.000us         0.01%       7.000us       7.000us             1  
+            aten::as_strided_         0.01%       7.000us         0.01%       7.000us       7.000us             1  
+              aten::transpose         0.01%       5.000us         0.01%       9.000us       9.000us             1  
+                     aten::to         0.00%       4.000us         0.04%      36.000us      36.000us             1  
+             aten::as_strided         0.00%       4.000us         0.00%       4.000us       2.000us             2  
+                 aten::expand         0.00%       4.000us         0.00%       4.000us       4.000us             1  
+           aten::resolve_conj         0.00%       1.000us         0.00%       1.000us       0.500us             2  
+-----------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 85.346ms
+
+inference latency: 0.807 ms
+inference Throughput: 1239.632 fps

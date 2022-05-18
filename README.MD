@@ -26,3 +26,6 @@ bash run_auto_xxx.sh $models $precision $bs $additional_options
 ```
 bash run_auto_xxx.sh all float32 112 "--profile"
 ```
+
+### Model Zoo
+https://pytorch.org/vision/stable/models.html#classification
