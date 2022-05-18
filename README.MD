@@ -16,7 +16,7 @@ python main.py \
       -i 100 \
       -a resnet50 \
       -b 64 \
-      --precision "float32"
+      --precision float32
 ```
 
 ### Automatic Runs

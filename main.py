@@ -665,6 +665,7 @@ def validate(val_loader, model, criterion, args):
                 # compute output
 
                 if args.torchdynamo_ipex:
+                    print("Running TorchDynamo with IPEX backend")
                     import torchdynamo
                     from torchdynamo.optimizations import backends
                     if args.precision == "float32":
@@ -682,6 +683,7 @@ def validate(val_loader, model, criterion, args):
                             else:
                                 output = model(images)
                 elif args.torchdynamo_fx:
+                    print("Running TorchDynamo with FX (torch.fx.GraphModule) backend")
                     from typing import List
                     import torchdynamo
                     def fx_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
