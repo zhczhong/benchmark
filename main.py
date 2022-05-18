@@ -405,9 +405,9 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.evaluate:
         if args.jit and not args.jit_optimize:
             if args.channels_last:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 image = image.to_mkldnn()
             if args.cuda:
@@ -435,9 +435,9 @@ def main_worker(gpu, ngpus_per_node, args):
             print("---- With JIT enabled.")
         if args.jit and args.jit_optimize:
             if args.channels_last:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 image = image.to_mkldnn()
             if args.cuda:
@@ -482,9 +482,9 @@ def main_worker(gpu, ngpus_per_node, args):
             model = optimization.fuse(model, inplace=True)
             conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
             if args.channels_last:
-                x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                x = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
