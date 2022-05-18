@@ -6,11 +6,7 @@ if [ ${model_all} == "all" ]; then
 fi
 precision=$2
 batch_size=$3
-profile=$4
-additional_options=$5
-if [ ${profile} == "profile" ]; then
-    additional_options="${additional_options}  --profile "
-fi
+additional_options=$4
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 

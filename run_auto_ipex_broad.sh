@@ -6,16 +6,12 @@ if [ ${model_all} == "all" ]; then
 fi
 precision=$2 # Note: float32, bfloat16, int8_ipex
 batch_size=$3
-profile=$4 # Note: profile, null
-additional_options=""
-if [ ${profile} == "profile" ]; then
-    additional_options="${additional_options}  --profile "
-fi
+additional_options=$4
 if [ ${precision} == "float32" ]; then
-    additional_options="${additional_options}  --jit "
+    additional_options="${additional_options} --jit"
 fi
 if [ ${precision} == "bfloat16" ]; then
-    additional_options="${additional_options}  --jit "
+    additional_options="${additional_options} --jit"
 fi
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))

@@ -21,5 +21,8 @@ python main.py \
 
 ### Automatic Runs
 ```
-bash run_auto_xxx.sh all float32 112 profile
+bash run_auto_xxx.sh $models $precision $bs $additional_options
+```
+```
+bash run_auto_xxx.sh all float32 112 "--profile"
 ```
