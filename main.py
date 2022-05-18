@@ -130,6 +130,8 @@ parser.add_argument("--torchdynamo_ipex", action='store_true',
                     help="using torchdynamo with ipex backend")
 parser.add_argument("--fx", action='store_true',
                     help="using fx.optimization.fuse")
+parser.add_argument("--torchdynamo_fx", action='store_true',
+                    help="using torchdynamo with ipex backend")
 
 args = parser.parse_args()
 
@@ -674,6 +676,25 @@ def validate(val_loader, model, criterion, args):
                                 output = model(images)
                     if args.precision in ["bfloat16", "bfloat16_brutal"]:
                         with torchdynamo.optimize(backends.ipex_bf16), torch.no_grad(), torch.cpu.amp.autocast():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
+                elif args.torchdynamo_fx:
+                    from typing import List
+                    import torchdynamo
+                    def fx_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+                        return gm.forward  # return a python callable
+                    if args.precision == "float32":
+                        with torchdynamo.optimize(fx_compiler), torch.no_grad():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
+                    if args.precision == "bfloat16":
+                        with torchdynamo.optimize(fx_compiler), torch.no_grad(), torch.cpu.amp.autocast():
                             if args.profile:
                                 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                                     output = model(images)
