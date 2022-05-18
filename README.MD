@@ -7,6 +7,7 @@ bash set_env.sh
 
 ### Quickstart
 ```
+numactl --cpunodebind=0 --membind=0 \
 python main.py \
       -e \
       --performance \
