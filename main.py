@@ -298,8 +298,10 @@ def main_worker(gpu, ngpus_per_node, args):
         #         model.cuda()
 
     if args.channels_last:
+        print("Running Channel Last")
         model = model.to(memory_format=torch.channels_last)
     if args.fx:
+        print("Running FX")
         model = optimization.fuse(model, inplace=True)
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
