@@ -14,7 +14,7 @@ fi
 if [ ${precision} == "float32" ]; then
     additional_options="${additional_options}  --jit "
 fi
-if [ ${profile} == "bfloat16" ]; then
+if [ ${precision} == "bfloat16" ]; then
     additional_options="${additional_options}  --jit "
 fi
 
