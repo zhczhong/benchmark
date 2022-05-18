@@ -131,7 +131,7 @@ parser.add_argument("--torchdynamo_ipex", action='store_true',
 parser.add_argument("--fx", action='store_true',
                     help="using fx.optimization.fuse")
 parser.add_argument("--torchdynamo_fx", action='store_true',
-                    help="using torchdynamo with ipex backend")
+                    help="using torchdynamo with fx backend")
 
 args = parser.parse_args()
 
