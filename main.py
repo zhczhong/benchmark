@@ -244,7 +244,7 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
             if args.arch == "inception_v3":
-                model = models.__dict__[args.arch](pretrained=True, aux_logits=False, transform_input=False)
+                model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
             else:
                 if args.arch == "googlenet":
                     model = models.__dict__[args.arch](pretrained=True, transform_input=False)
@@ -253,7 +253,7 @@ def main_worker(gpu, ngpus_per_node, args):
         else:
             if args.arch == "inception_v3":
                 print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch](aux_logits=False)
+                model = models.__dict__[args.arch](aux_logits=True)
             else:
                 print("=> creating model '{}'".format(args.arch))
                 model = models.__dict__[args.arch]()
