@@ -1,27 +1,14 @@
 ## Easy Guide
 
-### Environment pre-requisites
-PyTorch, IPEX-CPU (if needed)
-
-Enable jemalloc if applicable:
-```
-export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
-export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
-```
-Enable AVX512_CORE_AMX if applicable:
-```
-export DNNL_MAX_CPU_ISA=AVX512_CORE_AMX
-export ONEDNN_MAX_CPU_ISA=AVX512_CORE_AMX
-```
-
-### Prepare torchvision v0.11.1 and gen-efficientnet-pytorch (submodules)
+### Env Preperation
 ```
 bash set_env.sh
 ```
 
 ### Quickstart
 ```
-python ./gen-efficientnet-pytorch/main.py \
+numactl --cpunodebind=0 --membind=0 \
+python main.py \
       -e \
       --performance \
       --pretrained \
@@ -30,10 +17,16 @@ python ./gen-efficientnet-pytorch/main.py \
       -i 100 \
       -a resnet50 \
       -b 64 \
-      --precision "float32"
+      --precision float32
 ```
 
-### Run automation
+### Automatic Runs
 ```
-bash run_auto_xxx.sh
+bash run_auto_xxx.sh $models $precision $bs $additional_options
 ```
+```
+bash run_auto_xxx.sh all float32 112 "--profile"
+```
+
+### Model Zoo
+https://pytorch.org/vision/stable/models.html#classification

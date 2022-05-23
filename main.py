@@ -128,6 +128,10 @@ parser.add_argument("--int8_mkldnn", action='store_true',
                     help="using int8_mkldnn engine")
 parser.add_argument("--torchdynamo_ipex", action='store_true',
                     help="using torchdynamo with ipex backend")
+parser.add_argument("--fx", action='store_true',
+                    help="using fx.optimization.fuse")
+parser.add_argument("--torchdynamo_fx", action='store_true',
+                    help="using torchdynamo with fx backend")
 
 args = parser.parse_args()
 
@@ -198,6 +202,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if 'efficientnet' in args.arch:  # NEW
         import geffnet
+        geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
         if args.jit:
             geffnet.config.set_scriptable(True)
         if args.precision == "int8_ipex":
@@ -239,7 +244,7 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
             if args.arch == "inception_v3":
-                model = models.__dict__[args.arch](pretrained=True, aux_logits=False, transform_input=False)
+                model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
             else:
                 if args.arch == "googlenet":
                     model = models.__dict__[args.arch](pretrained=True, transform_input=False)
@@ -248,7 +253,7 @@ def main_worker(gpu, ngpus_per_node, args):
         else:
             if args.arch == "inception_v3":
                 print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch](aux_logits=False)
+                model = models.__dict__[args.arch](aux_logits=True)
             else:
                 print("=> creating model '{}'".format(args.arch))
                 model = models.__dict__[args.arch]()
@@ -293,15 +298,16 @@ def main_worker(gpu, ngpus_per_node, args):
         #         model.cuda()
 
     if args.channels_last:
-        model_oob = model
-        model_oob = model_oob.to(memory_format=torch.channels_last)
-        model = model_oob
-        print("Using channels_last memory format")
+        print("Running Channel Last")
+        model = model.to(memory_format=torch.channels_last)
+    if args.fx:
+        print("Running FX")
+        model = optimization.fuse(model, inplace=True)
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
     if args.ipex:
         import intel_extension_for_pytorch as ipex
-        if args.precision == "bfloat16":
+        if args.precision in ["bfloat16", "bfloat16_brutal"]:
             model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True)
         elif args.precision == "float32":
             model = ipex.optimize(model, dtype=torch.float32, inplace=True)
@@ -403,24 +409,28 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.evaluate:
         if args.jit and not args.jit_optimize:
             if args.channels_last:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 image = image.to_mkldnn()
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
-            if args.precision == "bfloat16" and not args.cuda:
-                image = image.to(torch.bfloat16)
+            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
+                if args.precision =="bfloat16_brutal":
+                    image = image.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT ...")
-                    model = model.to(dtype=torch.bfloat16)
+                    if args.precision =="bfloat16_brutal":
+                        model = model.to(dtype=torch.bfloat16)
                     model = torch.jit.trace(model, image, check_trace=False)
-            elif args.precision == "bfloat16" and args.cuda:
-                image = image.to(torch.float16)
+            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
+                if args.precision =="float16_brutal":
+                    image = image.to(torch.float16)
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT ...")
-                    model = model.to(dtype=torch.float16)
+                    if args.precision =="float16_brutal":
+                        model = model.to(dtype=torch.float16)
                     model = torch.jit.trace(model, image, check_trace=False)
             else:
                 with torch.no_grad():
@@ -429,20 +439,22 @@ def main_worker(gpu, ngpus_per_node, args):
             print("---- With JIT enabled.")
         if args.jit and args.jit_optimize:
             if args.channels_last:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                image = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 image = image.to_mkldnn()
             if args.cuda:
                 image = image.cuda(args.gpu, non_blocking=True)
-            if args.precision == "bfloat16" and not args.cuda:
-                image = image.to(torch.bfloat16)
+            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
+                if args.precision =="bfloat16_brutal":
+                    image = image.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT.optimize ...")
-                    model = model.to(dtype=torch.bfloat16)
+                    if args.precision =="bfloat16_brutal":
+                        model = model.to(dtype=torch.bfloat16)
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
-            elif args.precision == "bfloat16" and args.cuda:
+            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
                 image = image.to(torch.float16)
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT.optimize ...")
@@ -471,9 +483,9 @@ def main_worker(gpu, ngpus_per_node, args):
                         output = model(images)
                 print(".........calibration step done..........")
             if args.channels_last:
-                x = torch.randn(args.batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
+                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
-                x = torch.randn(args.batch_size, 3, 224, 224).contiguous()
+                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
@@ -482,11 +494,11 @@ def main_worker(gpu, ngpus_per_node, args):
                 print(model.graph_for(x))
             print("Running IPEX INT8 evaluation step ...\n")
             
-        if args.precision == "bfloat16" and not args.cuda:
+        if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
             with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
                 res = validate(val_loader, model, criterion, args)
-        elif args.precision == "bfloat16" and args.cuda:
+        elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
             print("Using CUDA autocast ...")
             with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
                 res = validate(val_loader, model, criterion, args)
@@ -507,11 +519,11 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # evaluate on validation set
         if not args.performance:
-            if args.precision == "bfloat16" and not args.cuda:
+            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
                 print("Using CPU autocast ...")
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
                     acc1 = validate(val_loader, model, criterion, args)
-            elif args.precision == "bfloat16" and args.cuda:
+            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
                 print("Using CUDA autocast ...")
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
                     acc1 = validate(val_loader, model, criterion, args)
@@ -566,9 +578,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         if args.cuda:
             target = target.cuda(args.gpu, non_blocking=True)
         elif args.channels_last:
-            input_oob = images
-            input_oob = input_oob.to(memory_format=torch.channels_last)
-            images = input_oob
+            images = images.to(memory_format=torch.channels_last)
         if args.to_mkldnn:
             images = images.to_mkldnn()
             
@@ -623,15 +633,16 @@ def validate(val_loader, model, criterion, args):
             model = torch.jit.freeze(model)
             print("---- Enable LLGA.")
 
-        if args.precision == "bfloat16":
+        if args.precision in ["bfloat16", "bfloat16_brutal"]:
             # with torch.amp.autocast(enabled=True, configure=torch.bfloat16, torch.no_grad(): 
             print("Running with bfloat16...")
         if args.dummy:
             images = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
             target = torch.arange(1, args.batch_size + 1).long()
-            if args.precision == "bfloat16":
-                images = images.to(torch.bfloat16)
-                target = target.to(torch.bfloat16)
+            if args.precision in ["bfloat16", "bfloat16_brutal"]:
+                if args.precision =="bfloat16_brutal":
+                    images = images.to(torch.bfloat16)
+                    target = target.to(torch.bfloat16)
             # print("Start convert to onnx!")
             # torch.onnx.export(model.module, images, args.arch + ".onnx", verbose=False)
             # print("End convert to onnx!")
@@ -665,8 +676,27 @@ def validate(val_loader, model, criterion, args):
                                     output = model(images)
                             else:
                                 output = model(images)
-                    if args.precision == "bfloat16":
+                    if args.precision in ["bfloat16", "bfloat16_brutal"]:
                         with torchdynamo.optimize(backends.ipex_bf16), torch.no_grad(), torch.cpu.amp.autocast():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
+                elif args.torchdynamo_fx:
+                    from typing import List
+                    import torchdynamo
+                    def fx_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+                        return gm.forward  # return a python callable
+                    if args.precision == "float32":
+                        with torchdynamo.optimize(fx_compiler), torch.no_grad():
+                            if args.profile:
+                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                    output = model(images)
+                            else:
+                                output = model(images)
+                    if args.precision == "bfloat16":
+                        with torchdynamo.optimize(fx_compiler), torch.no_grad(), torch.cpu.amp.autocast():
                             if args.profile:
                                 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                                     output = model(images)
@@ -696,9 +726,10 @@ def validate(val_loader, model, criterion, args):
                         target = target.cuda(args.gpu, non_blocking=True)
                     if args.channels_last:
                         images = images.contiguous(memory_format=torch.channels_last)
-                    if args.precision == "bfloat16":
-                        images = images.to(torch.bfloat16)
-                        target = target.to(torch.bfloat16)
+                    if args.precision in ["bfloat16", "bfloat16_brutal"]:
+                        if args.precision =="bfloat16_brutal":
+                            images = images.to(torch.bfloat16)
+                            target = target.to(torch.bfloat16)
                     if args.profile:
                         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                             output = model(images)

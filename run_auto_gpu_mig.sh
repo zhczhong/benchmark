@@ -1,5 +1,4 @@
 set -x
-cd gen-efficientnet-pytorch
 rm -rf logs
 mkdir logs
 

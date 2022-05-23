@@ -7,7 +7,6 @@ num_iter=500
 cores_per_ins=$3
 
 ### init log/sh folders
-cd gen-efficientnet-pytorch
 WS=${PWD}
 rm -rf multi-instance-sh
 mkdir multi-instance-sh

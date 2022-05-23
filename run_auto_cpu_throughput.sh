@@ -1,5 +1,4 @@
 set -x
-cd gen-efficientnet-pytorch
 
 precision=$1
 bs=$2
