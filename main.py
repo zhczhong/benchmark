@@ -357,7 +357,7 @@ def main_worker(gpu, ngpus_per_node, args):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
 
-    if not args.dummy and args.data:
+    if not args.dummy and args.data and not args.evaluate:
         train_dataset = datasets.ImageFolder(
             traindir,
             transforms.Compose([
@@ -392,7 +392,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('Using image size', image_size)
     else:
         val_transforms = transforms.Compose([
-            transforms.Resize(args.image_size),
+            transforms.Resize(256),
             transforms.CenterCrop(args.image_size),
             transforms.ToTensor(),
             normalize,
@@ -400,7 +400,7 @@ def main_worker(gpu, ngpus_per_node, args):
         print('Using image size', args.image_size)
 
     val_loader = []
-    if not args.dummy and args.data:
+    if not args.dummy and args.data and args.evaluate:
         val_loader = torch.utils.data.DataLoader(
             datasets.ImageFolder(valdir, val_transforms),
             batch_size=args.batch_size, shuffle=False,
@@ -481,10 +481,7 @@ def main_worker(gpu, ngpus_per_node, args):
                             images = images.to_mkldnn()
                         print(".........Cooking config_for_ipex_int8.json..........")
                         output = model(images)
-                conf.save("./config_for_ipex_int8.json")
                 print(".........calibration step done..........")
-            model = optimization.fuse(model, inplace=True)
-            conf = ipex.quantization.QuantConf("./config_for_ipex_int8.json")
             if args.channels_last:
                 x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
             else:
@@ -492,6 +489,9 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.to_mkldnn:
                 x = x.to_mkldnn()
             model = ipex.quantization.convert(model, conf, x)
+            with torch.no_grad():
+                y = model(x)
+                print(model.graph_for(x))
             print("Running IPEX INT8 evaluation step ...\n")
             
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
@@ -724,6 +724,8 @@ def validate(val_loader, model, criterion, args):
                         images = images.cuda(args.gpu, non_blocking=True)
                     if args.cuda:
                         target = target.cuda(args.gpu, non_blocking=True)
+                    if args.channels_last:
+                        images = images.contiguous(memory_format=torch.channels_last)
                     if args.precision in ["bfloat16", "bfloat16_brutal"]:
                         if args.precision =="bfloat16_brutal":
                             images = images.to(torch.bfloat16)
@@ -752,6 +754,7 @@ def validate(val_loader, model, criterion, args):
                     break
             print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
                   .format(top1=top1, top5=top5))
+            print("Accuracy: {top1.avg:.3f} ".format(top1=top1))
 
         if args.profile:
             import pathlib
@@ -842,7 +845,7 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
