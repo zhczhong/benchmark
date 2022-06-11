@@ -3,7 +3,7 @@
 ### Environment pre-requisites
 PyTorch, IPEX-CPU (if needed)
 
-### Env Preperation
+### Installations
 ```
 bash set_env.sh
 ```
