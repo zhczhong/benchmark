@@ -60,7 +60,7 @@ if [ ${sw_stack} == "ofi" ]; then
     additional_options="${additional_options} --channels_last 1 --jit --jit_optimize "
 fi
 if [ ${sw_stack} == "ipex" ]; then
-    additional_options="${additional_options} --ipex --channels_last 1  --jit_auto "
+    additional_options="${additional_options} --ipex --channels_last 1  --jit "
 fi
 if [ ${sw_stack} == "torchdynamo_ipex" ]; then
     additional_options="${additional_options} --torchdynamo_ipex --channels_last 1 "
@@ -103,7 +103,7 @@ numa_launch_header=" python -m numa_launcher --ninstances ${num_instances} --nco
 
 for model in ${model_list[@]}
 do
-    ${numa_launch_header} main.py -e --performance --pretrained --dummy -w 20 -i 500 --no-cuda -a ${model} -b ${batch_size} --precision ${precision} ${additional_options} \
+    ${numa_launch_header} main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b ${batch_size} --precision ${precision} ${additional_options} \
     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
     throughput=$(grep "Throughput:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g' | awk 'BEGIN {sum = 0;}{sum = sum + $1;} END {printf("%.3f", sum);}')
     echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} | tee -a ./logs/summary.log

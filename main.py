@@ -200,64 +200,82 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
-    if 'efficientnet' in args.arch:  # NEW
-        import geffnet
-        geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
-        if args.jit:
-            geffnet.config.set_scriptable(True)
-        if args.precision == "int8_ipex":
-            geffnet.config.set_scriptable(True)
-        if args.pretrained:
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
-            print("=> using pre-trained model '{}'".format(args.arch))
+    if args.pretrained:
+        print("=> using pre-trained model '{}'".format(args.arch))
+        if args.arch == "inception_v3":
+            model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
         else:
-            print("=> creating model '{}'".format(args.arch))
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
+            if args.arch == "googlenet":
+                model = models.__dict__[args.arch](pretrained=True, transform_input=False)
+            else:
+                model = models.__dict__[args.arch](pretrained=True)
         model.train(False)
-    elif 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
-        import geffnet
-        if args.jit:
-            geffnet.config.set_scriptable(True)
-        if args.pretrained:
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
-            print("=> using pre-trained model '{}'".format(args.arch))
-        else:
-            print("=> creating model '{}'".format(args.arch))
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
-        model.train(False)
-    elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch[0:4]:
-        import pretrainedmodels
-        import pretrainedmodels.utils
-        if args.pretrained:
-            model = pretrainedmodels.__dict__[args.arch](num_classes=args.num_classes, pretrained='imagenet')
-            print("=> using pre-trained model '{}'".format(args.arch))
-        else:
-            print("=> creating model '{}'".format(args.arch))
-            model = pretrainedmodels.__dict__[args.arch](pretrained=None)
-        model.train(False)
-    elif 'fpn' in args.arch:
-        model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-        model.train(False)
-        args.iterations = 20
-        print("Will run only ", args.iterations, " iterations for this model.")
     else:
-        if args.pretrained:
-            print("=> using pre-trained model '{}'".format(args.arch))
-            if args.arch == "inception_v3":
-                model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
-            else:
-                if args.arch == "googlenet":
-                    model = models.__dict__[args.arch](pretrained=True, transform_input=False)
-                else:
-                    model = models.__dict__[args.arch](pretrained=True)
+        if args.arch == "inception_v3":
+            print("=> creating model '{}'".format(args.arch))
+            model = models.__dict__[args.arch](aux_logits=True)
         else:
-            if args.arch == "inception_v3":
-                print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch](aux_logits=True)
-            else:
-                print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch]()
+            print("=> creating model '{}'".format(args.arch))
+            model = models.__dict__[args.arch]()
         model.train(False)
+    # if 'efficientnet' in args.arch:  # NEW
+        # import geffnet
+        # geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
+        # if args.jit:
+            # geffnet.config.set_scriptable(True)
+        # if args.precision == "int8_ipex":
+            # geffnet.config.set_scriptable(True)
+        # if args.pretrained:
+            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
+            # print("=> using pre-trained model '{}'".format(args.arch))
+        # else:
+            # print("=> creating model '{}'".format(args.arch))
+            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
+        # model.train(False)
+    # elif 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
+        # import geffnet
+        # if args.jit:
+            # geffnet.config.set_scriptable(True)
+        # if args.pretrained:
+            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
+            # print("=> using pre-trained model '{}'".format(args.arch))
+        # else:
+            # print("=> creating model '{}'".format(args.arch))
+            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
+        # model.train(False)
+    # elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch[0:4]:
+        # import pretrainedmodels
+        # import pretrainedmodels.utils
+        # if args.pretrained:
+            # model = pretrainedmodels.__dict__[args.arch](num_classes=args.num_classes, pretrained='imagenet')
+            # print("=> using pre-trained model '{}'".format(args.arch))
+        # else:
+            # print("=> creating model '{}'".format(args.arch))
+            # model = pretrainedmodels.__dict__[args.arch](pretrained=None)
+        # model.train(False)
+    # elif 'fpn' in args.arch:
+        # model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        # model.train(False)
+        # args.iterations = 20
+        # print("Will run only ", args.iterations, " iterations for this model.")
+    # else:
+        # if args.pretrained:
+            # print("=> using pre-trained model '{}'".format(args.arch))
+            # if args.arch == "inception_v3":
+                # model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
+            # else:
+                # if args.arch == "googlenet":
+                    # model = models.__dict__[args.arch](pretrained=True, transform_input=False)
+                # else:
+                    # model = models.__dict__[args.arch](pretrained=True)
+        # else:
+            # if args.arch == "inception_v3":
+                # print("=> creating model '{}'".format(args.arch))
+                # model = models.__dict__[args.arch](aux_logits=True)
+            # else:
+                # print("=> creating model '{}'".format(args.arch))
+                # model = models.__dict__[args.arch]()
+        # model.train(False)
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
