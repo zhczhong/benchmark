@@ -1,4 +1,4 @@
-## torchvision CPU Benchmark
+## TorchVision CPU Benchmark
 
 ### Env Preperation
 ```
