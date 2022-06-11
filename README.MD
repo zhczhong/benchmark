@@ -1,4 +1,4 @@
-## Easy Guide
+## torchvision CPU Benchmark
 
 ### Env Preperation
 ```
@@ -20,12 +20,19 @@ python main.py \
       --precision float32
 ```
 
-### Automatic Runs
+### Auto bench
+To run all modes (throughput, latency, multi_instance):
 ```
-bash run_auto_xxx.sh $models $precision $bs $additional_options
+bash run.sh
 ```
+To run a single mode:
 ```
-bash run_auto_xxx.sh all float32 112 "--profile"
+bash run.sh throughput
+```
+
+### Single-case bench
+```
+bash run_auto_cpu.sh resnet50 float32 throughput ipex
 ```
 
 ### Model Zoo
