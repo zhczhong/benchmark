@@ -200,24 +200,36 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
-    if args.pretrained:
-        print("=> using pre-trained model '{}'".format(args.arch))
-        if args.arch == "inception_v3":
-            model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
+    if 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
+        import geffnet
+        if args.jit:
+            geffnet.config.set_scriptable(True)
+        if args.pretrained:
+            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
+            print("=> using pre-trained model '{}'".format(args.arch))
         else:
-            if args.arch == "googlenet":
-                model = models.__dict__[args.arch](pretrained=True, transform_input=False)
-            else:
-                model = models.__dict__[args.arch](pretrained=True)
+            print("=> creating model '{}'".format(args.arch))
+            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
         model.train(False)
     else:
-        if args.arch == "inception_v3":
-            print("=> creating model '{}'".format(args.arch))
-            model = models.__dict__[args.arch](aux_logits=True)
+        if args.pretrained:
+            print("=> using pre-trained model '{}'".format(args.arch))
+            if args.arch == "inception_v3":
+                model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
+            else:
+                if args.arch == "googlenet":
+                    model = models.__dict__[args.arch](pretrained=True, transform_input=False)
+                else:
+                    model = models.__dict__[args.arch](pretrained=True)
         else:
-            print("=> creating model '{}'".format(args.arch))
-            model = models.__dict__[args.arch]()
+            if args.arch == "inception_v3":
+                print("=> creating model '{}'".format(args.arch))
+                model = models.__dict__[args.arch](aux_logits=True)
+            else:
+                print("=> creating model '{}'".format(args.arch))
+                model = models.__dict__[args.arch]()
         model.train(False)
+    # below is old enabling with geffnet and pretrainedmodels
     # if 'efficientnet' in args.arch:  # NEW
         # import geffnet
         # geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
