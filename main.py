@@ -495,21 +495,27 @@ def main_worker(gpu, ngpus_per_node, args):
                     model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
             print("---- With JIT.optimize_for_inference enabled.")
         if args.precision == "int8_ipex":
+            if args.channels_last:
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
+            else:
+                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
+            if args.to_mkldnn:
+                image = image.to_mkldnn()
             import intel_extension_for_pytorch as ipex
             model = optimization.fuse(model)
             print("Running IPEX INT8 calibration step ...\n")
             qconfig = torch.quantization.default_qconfig
-            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
+            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=image, inplace=False)
             with torch.no_grad():
                 for i in range(10):
                     # compute output
                     print(".........Cooking config_for_ipex_int8.json..........")
-                    output = prepared_model(x)
+                    output = prepared_model(image)
                 print(".........calibration step done..........")
             convert_model = ipex.quantization.convert(prepared_model)
             model = convert_model
             with torch.no_grad():
-                y = model(x)
+                y = model(image)
             print("Running IPEX INT8 evaluation step ...\n")
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
