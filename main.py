@@ -498,32 +498,19 @@ def main_worker(gpu, ngpus_per_node, args):
             import intel_extension_for_pytorch as ipex
             model = optimization.fuse(model)
             print("Running IPEX INT8 calibration step ...\n")
-            conf = ipex.quantization.QuantConf(qscheme=torch.per_tensor_symmetric)
+            qconfig = torch.quantization.default_qconfig
+            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
             with torch.no_grad():
                 for i in range(10):
-                    with ipex.quantization.calibrate(conf):
-                        # compute output
-                        if args.channels_last:
-                            images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
-                        else:
-                            images = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
-                        if args.to_mkldnn:
-                            images = images.to_mkldnn()
-                        print(".........Cooking config_for_ipex_int8.json..........")
-                        output = model(images)
+                    # compute output
+                    print(".........Cooking config_for_ipex_int8.json..........")
+                    output = prepared_model(x)
                 print(".........calibration step done..........")
-            if args.channels_last:
-                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
-            else:
-                x = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
-            if args.to_mkldnn:
-                x = x.to_mkldnn()
-            model = ipex.quantization.convert(model, conf, x)
+            convert_model = ipex.quantization.convert(prepared_model)
+            model = convert_model
             with torch.no_grad():
                 y = model(x)
-                print(model.graph_for(x))
             print("Running IPEX INT8 evaluation step ...\n")
-            
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
             with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
