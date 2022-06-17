@@ -8,6 +8,11 @@ PyTorch, IPEX-CPU (if needed)
 bash set_env.sh
 ```
 
+### Single-case bench
+```
+bash run_auto_cpu.sh resnet50 float32 throughput ipex
+```
+
 ### Auto bench
 To run all modes (throughput, latency, multi_instance):
 ```
@@ -16,11 +21,6 @@ bash run.sh
 To run a single mode:
 ```
 bash run.sh throughput
-```
-
-### Single-case bench
-```
-bash run_auto_cpu.sh resnet50 float32 throughput ipex
 ```
 
 ### Quickstart
