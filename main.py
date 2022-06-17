@@ -445,7 +445,7 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.to_mkldnn:
                 image = image.to_mkldnn()
             import intel_extension_for_pytorch as ipex
-            model = optimization.fuse(model)
+            # model = optimization.fuse(model) # delete since it's wrapped in ipex.quantization.prepare
             print("Running IPEX INT8 calibration step ...\n")
             qconfig = torch.quantization.default_qconfig
             prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=image, inplace=False)
