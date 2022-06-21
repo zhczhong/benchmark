@@ -13,6 +13,9 @@ fi
 if [ ${precision} == "bfloat16" ]; then
     additional_options="${additional_options} --jit"
 fi
+if [ ${precision} == "int8_ipex" ]; then
+    additional_options="${additional_options} --jit"
+fi
 
 MODEL_NAME_LIST=($(echo "${model_all}" |sed 's/,/ /g'))
 

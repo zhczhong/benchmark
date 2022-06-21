@@ -132,6 +132,8 @@ parser.add_argument("--fx", action='store_true',
                     help="using fx.optimization.fuse")
 parser.add_argument("--torchdynamo_fx", action='store_true',
                     help="using torchdynamo with fx backend")
+parser.add_argument("--num_multi_stream", type=int, default=-1,
+                    help="the number of streams for IPEX multi-stream")
 
 args = parser.parse_args()
 
@@ -436,87 +438,85 @@ def main_worker(gpu, ngpus_per_node, args):
             batch_size=args.batch_size, shuffle=False,
             num_workers=args.workers, pin_memory=True)
 
+    if args.ipex and args.num_multi_stream != -1:
+        args.traced_bs = args.batch_size // args.num_multi_stream
+        print("IPEX Runtime Extension: Multi-stream with Mini BATCH_SIZE: ", args.traced_bs)
+
     if args.evaluate:
+        batch_size = args.traced_bs if (args.ipex and args.num_multi_stream != -1) else args.batch_size
+        if args.channels_last:
+            x = torch.randn(batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
+        else:
+            x = torch.randn(batch_size, 3, args.image_size, args.image_size).contiguous()
+        if args.to_mkldnn:
+            x = x.to_mkldnn()
         if args.precision == "int8_ipex":
-            if args.channels_last:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
-            else:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
-            if args.to_mkldnn:
-                image = image.to_mkldnn()
             import intel_extension_for_pytorch as ipex
             # model = optimization.fuse(model) # delete since it's wrapped in ipex.quantization.prepare
             print("Running IPEX INT8 calibration step ...\n")
             qconfig = torch.quantization.default_qconfig
-            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=image, inplace=False)
+            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
             with torch.no_grad():
                 for i in range(10):
                     # compute output
                     print(".........Cooking config_for_ipex_int8.json..........")
-                    output = prepared_model(image)
+                    output = prepared_model(x)
                 print(".........calibration step done..........")
             convert_model = ipex.quantization.convert(prepared_model)
             model = convert_model
             with torch.no_grad():
-                y = model(image)
+                y = model(x)
             print("Running IPEX INT8 evaluation step ...\n")
         if args.jit and not args.jit_optimize:
-            if args.channels_last:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
-            else:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
-            if args.to_mkldnn:
-                image = image.to_mkldnn()
             if args.cuda:
-                image = image.cuda(args.gpu, non_blocking=True)
+                x = x.cuda(args.gpu, non_blocking=True)
             if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
                 if args.precision =="bfloat16_brutal":
-                    image = image.to(torch.bfloat16)
+                    x = x.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT ...")
                     if args.precision =="bfloat16_brutal":
                         model = model.to(dtype=torch.bfloat16)
-                    model = torch.jit.trace(model, image, check_trace=False)
+                    model = torch.jit.trace(model, x, check_trace=False)
             elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
                 if args.precision =="float16_brutal":
-                    image = image.to(torch.float16)
+                    x = x.to(torch.float16)
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT ...")
                     if args.precision =="float16_brutal":
                         model = model.to(dtype=torch.float16)
-                    model = torch.jit.trace(model, image, check_trace=False)
+                    model = torch.jit.trace(model, x, check_trace=False)
             else:
                 with torch.no_grad():
-                    model = torch.jit.trace(model, image, check_trace=False)
+                    model = torch.jit.trace(model, x, check_trace=False)
             model = torch.jit.freeze(model)
             print("---- With JIT enabled.")
         if args.jit and args.jit_optimize:
-            if args.channels_last:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
-            else:
-                image = torch.randn(args.batch_size, 3, args.image_size, args.image_size).contiguous()
-            if args.to_mkldnn:
-                image = image.to_mkldnn()
             if args.cuda:
-                image = image.cuda(args.gpu, non_blocking=True)
+                x = x.cuda(args.gpu, non_blocking=True)
             if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
                 if args.precision =="bfloat16_brutal":
-                    image = image.to(torch.bfloat16)
+                    x = x.to(torch.bfloat16)
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT.optimize ...")
                     if args.precision =="bfloat16_brutal":
                         model = model.to(dtype=torch.bfloat16)
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
             elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
-                image = image.to(torch.float16)
+                x = x.to(torch.float16)
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT.optimize ...")
                     model = model.to(dtype=torch.float16)
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
             else:
                 with torch.no_grad():
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, image, check_trace=False))
+                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
             print("---- With JIT.optimize_for_inference enabled.")
+            
+        if args.ipex and args.num_multi_stream != -1:
+            model = ipex.cpu.runtime.MultiStreamModule(model, num_streams=args.num_multi_stream)
+            print("IPEX Runtime Extension: Multi-stream enabled with num_streams = ", args.num_multi_stream)
+
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
             with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
