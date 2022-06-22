@@ -35,11 +35,12 @@ mkdir logs
 for model in ${MODEL_NAME_LIST[@]}
 do
   #numactl --cpunodebind=0 --membind=0 python \
-  python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator \
-  main.py -e --pretrained --no-cuda \
+  python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --node_id 0 \
+    ../main.py -e --pretrained --no-cuda \
     --data ${DATASET_DIR} \
     -j 0 \
     -w 0 \
+    -i 0 \
     -a $model \
     -b $batch_size \
     --precision ${precision} --ipex ${additional_options} 2>&1 | tee ./logs/$model-IPEX-${precision}-accuracy.log
