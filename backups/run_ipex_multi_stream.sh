@@ -17,7 +17,7 @@ do
 done
 
 # accuracy
-for precision in "float32" "int8_ipex"
+for precision in "float32" "bfloat16" "int8_ipex"
 do
     bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size}
     mv logs ${log_dir}/${precision}_acc_logs
