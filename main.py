@@ -452,16 +452,7 @@ def main_worker(gpu, ngpus_per_node, args):
             x = x.to_mkldnn()
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
-            # model = optimization.fuse(model) # delete since it's wrapped in ipex.quantization.prepare
-            print("Running IPEX INT8 calibration step ...\n")
-            #qconfig = torch.quantization.default_qconfig
-            from torch.ao.quantization import MinMaxObserver, PerChannelMinMaxObserver, HistogramObserver, QConfig
-            # static qconfig
-            _default_weight_observer = PerChannelMinMaxObserver.with_args(dtype=torch.qint8, qscheme=torch.per_channel_symmetric)
-            qconfig = QConfig(
-                #activation=MinMaxObserver.with_args(qscheme=torch.per_tensor_symmetric, dtype=torch.qint8),
-                activation=HistogramObserver.with_args(reduce_range=False),
-                weight=_default_weight_observer)
+            qconfig = ipex.quantization.default_static_qconfig
             prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
             with torch.no_grad():
                 for i, (images, target) in enumerate(val_loader):
@@ -469,15 +460,11 @@ def main_worker(gpu, ngpus_per_node, args):
                         break
                     if args.channels_last:
                         images = images.contiguous(memory_format=torch.channels_last)
-                    # compute output
-                    print(".........Calibrating for batch {}..........", i)
                     output = prepared_model(images)
-                print(".........calibration step done..........")
             convert_model = ipex.quantization.convert(prepared_model)
             model = convert_model
             with torch.no_grad():
                 y = model(x)
-            print("Running IPEX INT8 evaluation step ...\n")
         if args.jit and not args.jit_optimize:
             if args.cuda:
                 x = x.cuda(args.gpu, non_blocking=True)
