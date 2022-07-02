@@ -57,7 +57,7 @@ if [ ${sw_stack} == "pt" ]; then
     additional_options="${additional_options} --channels_last 1 "
 fi
 if [ ${sw_stack} == "jit" ]; then
-    additional_options="${additional_options} --channels_last 1 --jit --jit_optimize "
+    additional_options="${additional_options} --channels_last 1 --jit "
 fi
 if [ ${sw_stack} == "jit_ofi" ]; then
     additional_options="${additional_options} --channels_last 1 --jit --jit_optimize "
