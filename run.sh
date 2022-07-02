@@ -11,9 +11,11 @@ do
     bash run_auto_cpu.sh all float32 ${mode} ipex
     # bash run_auto_cpu.sh all float32 ${mode} torchdynamo_ipex
     bash run_auto_cpu.sh all float32 ${mode} pt
-    bash run_auto_cpu.sh all float32 ${mode} ofi
+    bash run_auto_cpu.sh all float32 ${mode} jit
+    bash run_auto_cpu.sh all float32 ${mode} jit_ofi
     bash run_auto_cpu.sh all bfloat16 ${mode} ipex
     # bash run_auto_cpu.sh all bfloat16 ${mode} torchdynamo_ipex
     bash run_auto_cpu.sh all bfloat16 ${mode} pt
+    bash run_auto_cpu.sh all bfloat16 ${mode} jit
     bash run_auto_cpu.sh all int8_ipex ${mode} int8_ipex
 done
