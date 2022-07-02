@@ -56,7 +56,10 @@ model_list=($(echo "${model_all}" |sed 's/,/ /g'))
 if [ ${sw_stack} == "pt" ]; then
     additional_options="${additional_options} --channels_last 1 "
 fi
-if [ ${sw_stack} == "ofi" ]; then
+if [ ${sw_stack} == "jit" ]; then
+    additional_options="${additional_options} --channels_last 1 --jit --jit_optimize "
+fi
+if [ ${sw_stack} == "jit_ofi" ]; then
     additional_options="${additional_options} --channels_last 1 --jit --jit_optimize "
 fi
 if [ ${sw_stack} == "ipex" ]; then
