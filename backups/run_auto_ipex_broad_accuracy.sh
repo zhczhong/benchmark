@@ -34,6 +34,11 @@ mkdir logs
 
 for model in ${MODEL_NAME_LIST[@]}
 do
+  if [ ${save_config_folder} ]; then
+    config_options="--save_config_file ${save_config_folder}/${model}.json"
+  elif [ ${load_config_folder} ]; then
+    config_options="--load_config_file ${save_config_folder}/${model}.json"
+  fi
   #numactl --cpunodebind=0 --membind=0 python \
   python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --node_id 0 \
     ../main.py -e --pretrained --no-cuda \
@@ -43,7 +48,7 @@ do
     -i 0 \
     -a $model \
     -b $batch_size \
-    --precision ${precision} --ipex ${additional_options} 2>&1 | tee ./logs/$model-IPEX-${precision}-accuracy.log
+    --precision ${precision} --ipex ${additional_options} ${config_options} 2>&1 | tee ./logs/$model-IPEX-${precision}-accuracy.log
   accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-${precision}-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
   echo $model IPEX ${precision} accuracy $accuracy | tee -a ./logs/summary.log
 done

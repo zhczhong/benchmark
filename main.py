@@ -122,8 +122,10 @@ parser.add_argument('--channels_last', type=int, default=1,
                     help='use channels last format')
 parser.add_argument('--to_mkldnn', type=int, default=0,
                     help='use mkldnn')
-parser.add_argument('--config_file', type=str, default="./conf.yaml",
-                    help='config file for int8 tune')
+parser.add_argument("--save_config_file", type=str, default="",
+                    help='save config file for int8 tune during calibration steps')
+parser.add_argument('--load_config_file', type=str, default="",
+                    help='load config file for int8 tune, and skip calibration steps')
 parser.add_argument("--int8_mkldnn", action='store_true',
                     help="using int8_mkldnn engine")
 parser.add_argument("--torchdynamo_ipex", action='store_true',
@@ -134,6 +136,8 @@ parser.add_argument("--torchdynamo_fx", action='store_true',
                     help="using torchdynamo with fx backend")
 parser.add_argument("--num_multi_stream", type=int, default=-1,
                     help="the number of streams for IPEX multi-stream")
+parser.add_argument("--reduce_range", action='store_true',
+                    help="change the reduce_ranged used in ipex qconfig, default is False")
 
 args = parser.parse_args()
 
@@ -452,15 +456,23 @@ def main_worker(gpu, ngpus_per_node, args):
             x = x.to_mkldnn()
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
-            qconfig = ipex.quantization.default_static_qconfig
+            #qconfig = ipex.quantization.default_static_qconfig
+            from torch.ao.quantization import HistogramObserver, PerChannelMinMaxObserver, QConfig
+            qconfig = QConfig(activation=HistogramObserver.with_args(reduce_range=args.reduce_range),
+                weight=PerChannelMinMaxObserver.with_args(dtype=torch.qint8, qscheme=torch.per_channel_symmetric, reduce_range=args.reduce_range))
             prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
-            with torch.no_grad():
-                for i, (images, target) in enumerate(val_loader):
-                    if i > 300 // args.batch_size:
-                        break
-                    if args.channels_last:
-                        images = images.contiguous(memory_format=torch.channels_last)
-                    output = prepared_model(images)
+            if args.load_config_file == "":
+                with torch.no_grad():
+                    for i, (images, target) in enumerate(val_loader):
+                        if i > 300 // args.batch_size:
+                            break
+                        if args.channels_last:
+                            images = images.contiguous(memory_format=torch.channels_last)
+                        output = prepared_model(images)
+                if args.save_config_file != "":
+                    prepared_model.save_qconf_summary(args.save_config_file)
+            else:
+                prepared_model.load_qconf_summary(qconf_summary=args.load_config_file)
             convert_model = ipex.quantization.convert(prepared_model)
             model = convert_model
             with torch.no_grad():
