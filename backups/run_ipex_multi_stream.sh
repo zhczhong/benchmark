@@ -21,8 +21,8 @@ mkdir -p ${log_dir}
 for precision in "int8_ipex"
 do
     #bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size}
-    save_config_folder="configs/${log_dir}" bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size}
-    #save_config_folder="configs/${log_dir}" bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size} "--reduce_range"
+    save_config_folder="../configs/${log_dir}" bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size}
+    #save_config_folder="../configs/${log_dir}" bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size} "--reduce_range"
     mv logs ${log_dir}/${precision}_acc_logs
     #OMP_NUM_THREADS=`expr ${num_cores} / ${num_streams}` bash run_auto_ipex_broad_accuracy.sh all ${precision} ${batch_size} "--num_multi_stream ${num_streams}" 
     #mv logs ${log_dir}/${precision}_acc_logs_num_streams_${num_streams}
