@@ -37,7 +37,7 @@ do
   if [ ${save_config_folder} ]; then
     config_options="--save_config_file ${save_config_folder}/${model}.json"
   elif [ ${load_config_folder} ]; then
-    config_options="--load_config_file ${save_config_folder}/${model}.json"
+    config_options="--load_config_file ${load_config_folder}/${model}.json"
   fi
   #numactl --cpunodebind=0 --membind=0 python \
   python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --node_id 0 \
