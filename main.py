@@ -19,6 +19,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torch.fx.experimental.optimization as optimization
+from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
 
 import pretrainedmodels.utils
 
@@ -97,6 +98,10 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'multi node data parallel training')
 parser.add_argument('--ipex', action='store_true', default=False,
                     help='use ipex weight cache')
+
+parser.add_argument('--openvino', action='store_true', default=False,
+                    help='use openvino weight cache')
+
 parser.add_argument('--jit', action='store_true', default=False,
                     help='enable JIT path')
 parser.add_argument('--jit_optimize', action='store_true', default=False,
@@ -138,6 +143,9 @@ parser.add_argument("--num_multi_stream", type=int, default=-1,
                     help="the number of streams for IPEX multi-stream")
 parser.add_argument("--reduce_range", action='store_true',
                     help="change the reduce_ranged used in ipex qconfig, default is False")
+parser.add_argument("--backend", type=str,
+                    help="OpenVINO target device (CPU, GPU).")
+
 
 args = parser.parse_args()
 
@@ -348,6 +356,15 @@ def main_worker(gpu, ngpus_per_node, args):
         elif args.precision == "float32":
             model = ipex.optimize(model, dtype=torch.float32, inplace=True)
         print("Running with IPEX {}...".format(args.precision))
+    if args.openvino:
+        provider_options = OpenVINOProviderOptions(
+                backend=args.backend, precision=args.precision)
+        model = ORTInferenceModule(model, provider_options=provider_options)
+        # print('++++++++++++++++++++++++++++xxxx++++++++++++++++++++++++')
+        # start = time.time()
+        # output = model(images)
+        # end = time.time()
+        # print('----------------Finished---------TimeConsuming:{}'.format(end-start))
 
     # define loss function (criterion) and optimizer
     if args.cuda:
@@ -585,6 +602,17 @@ def get_image_size(model_name):
         assert False, "Unsupported model:{}".format(model_name)
     return res
 
+def preprocess(img):
+    transform = transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+    return transform(img)
+    
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -614,7 +642,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             images = images.to(memory_format=torch.channels_last)
         if args.to_mkldnn:
             images = images.to_mkldnn()
-            
+
         # compute output
         output = model(images)
         loss = criterion(output, target)
@@ -659,6 +687,7 @@ def validate(val_loader, model, criterion, args):
     # switch to evaluate mode
     model.eval()
 
+
     with torch.no_grad():
         if args.llga:
             torch._C._jit_set_llga_enabled(True)
@@ -690,6 +719,9 @@ def validate(val_loader, model, criterion, args):
             if args.to_mkldnn and args.evaluate:
                 model_oob = torch.utils.mkldnn.to_mkldnn(model_oob)
             model, images = model_oob, input_oob
+            # Convert to Contiguous Tensor.
+            images = images.contiguous()
+
             for i in range(iterations + warmup):
                 if i >= warmup:
                     end = time.time()
@@ -741,7 +773,7 @@ def validate(val_loader, model, criterion, args):
                             output = model(images)
                     else:
                         output = model(images)
-                  
+ 
                 # measure elapsed time
                 if i >= warmup:
                     batch_time.update(time.time() - end)
@@ -767,6 +799,7 @@ def validate(val_loader, model, criterion, args):
                         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
                             output = model(images)
                     else:
+                        print("-------------------")
                         output = model(images)
 
                     # measure elapsed time

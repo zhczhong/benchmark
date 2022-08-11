@@ -1,0 +1,594 @@
+2022-07-26 10:45:55,980 - __main__ - INFO - Use JeMalloc memory allocator
+2022-07-26 10:45:55,981 - __main__ - INFO - OMP_NUM_THREADS=28
+2022-07-26 10:45:55,981 - __main__ - INFO - Using Intel OpenMP
+2022-07-26 10:45:55,981 - __main__ - INFO - KMP_AFFINITY=granularity=fine,compact,1,0
+2022-07-26 10:45:55,981 - __main__ - INFO - KMP_BLOCKTIME=1
+2022-07-26 10:45:55,981 - __main__ - INFO - LD_PRELOAD=/root/miniconda3/envs/ipex1-12/lib/libjemalloc.so:/root/miniconda3/envs/ipex1-12/lib/libiomp5.so
+2022-07-26 10:45:55,981 - __main__ - INFO - numactl -C 0-27 -m 0 /root/miniconda3/envs/ipex1-12/bin/python -u main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a vit_b_16 -b 56 --precision float32 --ipex --channels_last 1 --jit
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+
+User settings:
+
+   KMP_AFFINITY=granularity=fine,compact,1,0
+   KMP_BLOCKTIME=1
+   KMP_SETTINGS=1
+   OMP_NUM_THREADS=28
+
+Effective settings:
+
+   KMP_ABORT_DELAY=0
+   KMP_ADAPTIVE_LOCK_PROPS='1,1024'
+   KMP_ALIGN_ALLOC=64
+   KMP_ALL_THREADPRIVATE=448
+   KMP_ATOMIC_MODE=2
+   KMP_BLOCKTIME=1
+   KMP_CPUINFO_FILE: value is not defined
+   KMP_DETERMINISTIC_REDUCTION=false
+   KMP_DEVICE_THREAD_LIMIT=2147483647
+   KMP_DISP_HAND_THREAD=false
+   KMP_DISP_NUM_BUFFERS=7
+   KMP_DUPLICATE_LIB_OK=false
+   KMP_ENABLE_TASK_THROTTLING=true
+   KMP_FORCE_MONOTONIC_DYNAMIC_SCHEDULE=false
+   KMP_FORCE_REDUCTION: value is not defined
+   KMP_FOREIGN_THREADS_THREADPRIVATE=true
+   KMP_FORKJOIN_BARRIER='2,2'
+   KMP_FORKJOIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_FORKJOIN_FRAMES=true
+   KMP_FORKJOIN_FRAMES_MODE=3
+   KMP_GTID_MODE=3
+   KMP_HANDLE_SIGNALS=false
+   KMP_HOT_TEAMS_MAX_LEVEL=1
+   KMP_HOT_TEAMS_MODE=0
+   KMP_INIT_AT_FORK=true
+   KMP_ITT_PREPARE_DELAY=0
+   KMP_LIBRARY=throughput
+   KMP_LOCK_KIND=tas
+   KMP_MALLOC_POOL_INCR=1M
+   KMP_MWAIT_HINTS=0
+   KMP_NESTING_MODE=0
+   KMP_NUM_LOCKS_IN_BLOCK=1
+   KMP_PLAIN_BARRIER='2,2'
+   KMP_PLAIN_BARRIER_PATTERN='hyper,hyper'
+   KMP_REDUCTION_BARRIER='1,1'
+   KMP_REDUCTION_BARRIER_PATTERN='hyper,hyper'
+   KMP_SCHEDULE='static,balanced;guided,iterative'
+   KMP_SETTINGS=true
+   KMP_SPIN_BACKOFF_PARAMS='4096,100'
+   KMP_STACKOFFSET=64
+   KMP_STACKPAD=0
+   KMP_STACKSIZE=8M
+   KMP_STORAGE_MAP=false
+   KMP_TASKING=2
+   KMP_TASKLOOP_MIN_TASKS=0
+   KMP_TASK_STEALING_CONSTRAINT=1
+   KMP_TEAMS_PROC_BIND=spread
+   KMP_TEAMS_THREAD_LIMIT=112
+   KMP_TOPOLOGY_METHOD=all
+   KMP_USER_LEVEL_MWAIT=false
+   KMP_USE_YIELD=1
+   KMP_VERSION=false
+   KMP_WARNINGS=true
+   LIBOMP_NUM_HIDDEN_HELPER_THREADS=0
+   LIBOMP_USE_HIDDEN_HELPER_TASK=false
+   OMP_AFFINITY_FORMAT='OMP: pid %P tid %i thread %n bound to OS proc set {%A}'
+   OMP_ALLOCATOR=omp_default_mem_alloc
+   OMP_CANCELLATION=false
+   OMP_DEBUG=disabled
+   OMP_DEFAULT_DEVICE=0
+   OMP_DISPLAY_AFFINITY=false
+   OMP_DISPLAY_ENV=false
+   OMP_DYNAMIC=false
+   OMP_MAX_ACTIVE_LEVELS=1
+   OMP_MAX_TASK_PRIORITY=0
+   OMP_NESTED: deprecated; max-active-levels-var=1
+   OMP_NUM_TEAMS=0
+   OMP_NUM_THREADS='28'
+   OMP_PLACES='threads'
+   OMP_PROC_BIND='intel'
+   OMP_SCHEDULE='static'
+   OMP_STACKSIZE=8M
+   OMP_TARGET_OFFLOAD=DEFAULT
+   OMP_TEAMS_THREAD_LIMIT=0
+   OMP_THREAD_LIMIT=2147483647
+   OMP_TOOL=enabled
+   OMP_TOOL_LIBRARIES: value is not defined
+   OMP_TOOL_VERBOSE_INIT: value is not defined
+   OMP_WAIT_POLICY=PASSIVE
+   KMP_AFFINITY='noverbose,warnings,respect,granularity=thread,compact,1,0'
+
+Running with IPEX...
+Namespace(advprop=False, arch='vit_b_16', batch_size=56, channels_last=1, data='', dist_backend='nccl', dist_url='tcp://224.66.41.62:23456', dummy=True, epochs=90, evaluate=True, fx=False, gpu=None, image_size=224, int8_mkldnn=False, ipex=True, iterations=200, jit=True, jit_optimize=False, llga=False, load_config_file='', lr=0.1, momentum=0.9, multiprocessing_distributed=False, no_cuda=True, num_classes=1000, num_multi_stream=-1, performance=True, ppn=1, precision='float32', pretrained=True, print_freq=10, profile=False, rank=-1, reduce_range=False, resume='', save_config_file='', seed=None, start_epoch=0, to_mkldnn=0, torchdynamo_fx=False, torchdynamo_ipex=False, warmup_iterations=20, weight_decay=0.0001, workers=1, world_size=-1)
+=> using pre-trained model 'vit_b_16'
+/root/miniconda3/envs/ipex1-12/lib/python3.7/site-packages/torchvision/models/_utils.py:209: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and will be removed in 0.15, please use 'weights' instead.
+  f"The parameter '{pretrained_param}' is deprecated since 0.13 and will be removed in 0.15, "
+/root/miniconda3/envs/ipex1-12/lib/python3.7/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and will be removed in 0.15. The current behavior is equivalent to passing `weights=ViT_B_16_Weights.IMAGENET1K_V1`. You can also use `weights=ViT_B_16_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Downloading: "https://download.pytorch.org/models/vit_b_16-c867db91.pth" to /root/.cache/torch/hub/checkpoints/vit_b_16-c867db91.pth
+  0%|          | 0.00/330M [00:00<?, ?B/s]  0%|          | 40.0k/330M [00:00<29:56, 193kB/s]  0%|          | 96.0k/330M [00:00<23:07, 250kB/s]  0%|          | 160k/330M [00:00<15:50, 364kB/s]   0%|          | 248k/330M [00:00<19:34, 295kB/s]  0%|          | 368k/330M [00:00<12:24, 465kB/s]  0%|          | 600k/330M [00:01<06:53, 836kB/s]  0%|          | 744k/330M [00:01<05:54, 975kB/s]  0%|          | 920k/330M [00:01<08:04, 713kB/s]  0%|          | 1.27M/330M [00:01<04:43, 1.22MB/s]  1%|          | 2.17M/330M [00:01<02:02, 2.82MB/s]  1%|          | 2.56M/330M [00:02<03:11, 1.80MB/s]  1%|          | 3.29M/330M [00:02<02:08, 2.67MB/s]  2%|▏         | 5.26M/330M [00:02<00:58, 5.86MB/s]  2%|▏         | 6.15M/330M [00:02<00:53, 6.32MB/s]  2%|▏         | 7.00M/330M [00:02<01:12, 4.71MB/s]  3%|▎         | 8.99M/330M [00:02<00:44, 7.54MB/s]  3%|▎         | 11.0M/330M [00:03<00:32, 10.3MB/s]  4%|▍         | 14.1M/330M [00:03<00:21, 15.3MB/s]  5%|▍         | 16.0M/330M [00:03<00:31, 10.3MB/s]  6%|▌         | 20.2M/330M [00:03<00:19, 16.3MB/s]  8%|▊         | 25.0M/330M [00:03<00:13, 23.0MB/s]  9%|▉         | 30.0M/330M [00:03<00:10, 29.7MB/s] 11%|█         | 35.2M/330M [00:04<00:13, 22.5MB/s] 12%|█▏        | 38.2M/330M [00:04<00:12, 24.1MB/s] 13%|█▎        | 42.8M/330M [00:04<00:10, 29.1MB/s] 15%|█▍        | 48.9M/330M [00:04<00:08, 36.9MB/s] 16%|█▌        | 53.1M/330M [00:04<00:12, 23.3MB/s] 17%|█▋        | 56.4M/330M [00:04<00:11, 24.1MB/s] 19%|█▉        | 62.0M/330M [00:05<00:09, 30.7MB/s] 20%|██        | 66.3M/330M [00:05<00:08, 33.8MB/s] 21%|██▏       | 70.3M/330M [00:05<00:12, 22.6MB/s] 23%|██▎       | 75.9M/330M [00:05<00:09, 28.8MB/s] 24%|██▍       | 79.7M/330M [00:05<00:08, 29.8MB/s] 26%|██▌       | 86.3M/330M [00:05<00:06, 38.2MB/s] 28%|██▊       | 90.9M/330M [00:06<00:10, 25.1MB/s] 29%|██▉       | 96.5M/330M [00:06<00:07, 30.9MB/s] 30%|███       | 101M/330M [00:06<00:07, 32.6MB/s]  32%|███▏      | 105M/330M [00:06<00:10, 23.2MB/s] 33%|███▎      | 111M/330M [00:06<00:07, 29.3MB/s] 35%|███▍      | 114M/330M [00:06<00:07, 29.4MB/s] 37%|███▋      | 121M/330M [00:07<00:05, 38.3MB/s] 38%|███▊      | 126M/330M [00:07<00:08, 24.5MB/s] 40%|███▉      | 131M/330M [00:07<00:06, 29.9MB/s] 41%|████      | 136M/330M [00:07<00:06, 30.2MB/s] 43%|████▎     | 142M/330M [00:07<00:05, 37.5MB/s] 44%|████▍     | 146M/330M [00:08<00:07, 25.2MB/s] 46%|████▌     | 152M/330M [00:08<00:06, 30.7MB/s] 47%|████▋     | 156M/330M [00:08<00:05, 32.4MB/s] 49%|████▊     | 160M/330M [00:08<00:07, 23.6MB/s] 50%|████▉     | 165M/330M [00:08<00:06, 27.4MB/s] 52%|█████▏    | 170M/330M [00:08<00:04, 33.9MB/s] 53%|█████▎    | 175M/330M [00:09<00:04, 34.6MB/s] 55%|█████▍    | 181M/330M [00:09<00:05, 26.8MB/s] 57%|█████▋    | 187M/330M [00:09<00:04, 32.0MB/s] 58%|█████▊    | 191M/330M [00:09<00:04, 34.3MB/s] 60%|█████▉    | 197M/330M [00:09<00:03, 40.7MB/s] 61%|██████    | 202M/330M [00:10<00:05, 26.9MB/s] 63%|██████▎   | 207M/330M [00:10<00:04, 30.7MB/s] 64%|██████▍   | 212M/330M [00:10<00:03, 36.0MB/s] 66%|██████▌   | 217M/330M [00:10<00:02, 39.8MB/s] 67%|██████▋   | 222M/330M [00:10<00:02, 42.9MB/s] 69%|██████▊   | 227M/330M [00:10<00:03, 27.3MB/s] 70%|███████   | 231M/330M [00:10<00:03, 30.7MB/s] 71%|███████▏  | 236M/330M [00:10<00:02, 34.5MB/s] 73%|███████▎  | 241M/330M [00:11<00:02, 39.8MB/s] 74%|███████▍  | 246M/330M [00:12<00:06, 12.7MB/s] 77%|███████▋  | 253M/330M [00:12<00:04, 18.3MB/s] 78%|███████▊  | 258M/330M [00:12<00:03, 22.2MB/s] 79%|███████▉  | 262M/330M [00:12<00:03, 19.5MB/s] 81%|████████  | 266M/330M [00:12<00:03, 22.2MB/s] 82%|████████▏ | 272M/330M [00:12<00:02, 27.9MB/s] 84%|████████▎ | 276M/330M [00:12<00:01, 31.1MB/s] 85%|████████▌ | 281M/330M [00:13<00:02, 23.2MB/s] 87%|████████▋ | 286M/330M [00:13<00:01, 28.3MB/s] 88%|████████▊ | 290M/330M [00:13<00:01, 29.4MB/s] 90%|████████▉ | 296M/330M [00:13<00:01, 35.4MB/s] 91%|█████████ | 300M/330M [00:13<00:01, 23.8MB/s] 92%|█████████▏| 305M/330M [00:14<00:00, 28.1MB/s] 94%|█████████▎| 309M/330M [00:14<00:00, 31.2MB/s] 95%|█████████▌| 315M/330M [00:14<00:00, 37.0MB/s] 97%|█████████▋| 319M/330M [00:14<00:00, 24.7MB/s] 98%|█████████▊| 324M/330M [00:14<00:00, 29.3MB/s]100%|█████████▉| 329M/330M [00:14<00:00, 33.9MB/s]100%|██████████| 330M/330M [00:14<00:00, 23.3MB/s]
+Running Channel Last
+Running with IPEX float32...
+Using image size 224
+/root/miniconda3/envs/ipex1-12/lib/python3.7/site-packages/torch/__init__.py:833: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  assert condition, message
+<string>:14: UserWarning: __floordiv__ is deprecated, and its behavior will change in a future version of pytorch. It currently rounds toward 0 (like the 'trunc' function NOT 'floor'). This results in incorrect rounding for negative values. To keep the current behavior, use torch.div(a, b, rounding_mode='trunc'), or for actual floor division, use torch.div(a, b, rounding_mode='floor').
+<string>:15: UserWarning: __floordiv__ is deprecated, and its behavior will change in a future version of pytorch. It currently rounds toward 0 (like the 'trunc' function NOT 'floor'). This results in incorrect rounding for negative values. To keep the current behavior, use torch.div(a, b, rounding_mode='trunc'), or for actual floor division, use torch.div(a, b, rounding_mode='floor').
+---- With JIT enabled.
+Test: [0/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [10/0]	Time  0.000 ( 0.000)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [20/0]	Time  0.855 ( 0.855)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [30/0]	Time  0.858 ( 0.856)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [40/0]	Time  0.858 ( 0.857)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [50/0]	Time  0.859 ( 0.858)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [60/0]	Time  0.861 ( 0.858)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [70/0]	Time  0.864 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [80/0]	Time  0.860 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [90/0]	Time  0.861 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [100/0]	Time  0.863 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [110/0]	Time  0.861 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [120/0]	Time  0.858 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [130/0]	Time  0.855 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [140/0]	Time  0.857 ( 0.860)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [150/0]	Time  0.855 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [160/0]	Time  0.857 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [170/0]	Time  0.858 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [180/0]	Time  0.857 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [190/0]	Time  0.857 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [200/0]	Time  0.860 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [210/0]	Time  0.860 ( 0.859)	Loss 0.0000e+00 (0.0000e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+inference latency: 15.339 ms
+inference Throughput: 65.194 fps

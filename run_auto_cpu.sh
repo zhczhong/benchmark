@@ -71,7 +71,9 @@ fi
 if [ ${sw_stack} == "int8_ipex" ]; then
     additional_options="${additional_options} --channels_last 1 --jit "
 fi
-
+if [ ${sw_stack} == "openvino" ]; then
+    additional_options="${additional_options} --openvino --channels_last 1 --backend CPU"
+fi
 
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
