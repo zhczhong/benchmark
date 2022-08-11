@@ -40,3 +40,6 @@ python main.py \
 
 ### Model Zoo
 https://pytorch.org/vision/stable/models.html#classification
+
+### Note
+Precision Group for Openvino: FP32, FP16....
