@@ -357,8 +357,9 @@ def main_worker(gpu, ngpus_per_node, args):
             model = ipex.optimize(model, dtype=torch.float32, inplace=True)
         print("Running with IPEX {}...".format(args.precision))
     if args.openvino:
-        provider_options = OpenVINOProviderOptions(
-                backend=args.backend, precision=args.precision)
+        if args.precision == "float32": 
+            provider_options = OpenVINOProviderOptions(
+                    backend=args.backend, precision="FP32")
         model = ORTInferenceModule(model, provider_options=provider_options)
         # print('++++++++++++++++++++++++++++xxxx++++++++++++++++++++++++')
         # start = time.time()
