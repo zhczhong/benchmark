@@ -75,13 +75,6 @@ if [ ${sw_stack} == "openvino" ]; then
     additional_options="${additional_options} --openvino --channels_last 1 --backend CPU"
 fi
 
-export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
-export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
-export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
-export KMP_AFFINITY="granularity=fine,compact,1,0"
-export KMP_BLOCKTIME=1
-export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
-export KMP_SETTINGS=1
 
 sockets_num=$(lscpu |grep 'Socket(s):' |sed 's/[^0-9]//g')
 cores_per_socket=$(lscpu |grep 'Core(s) per socket:' |sed 's/[^0-9]//g')
@@ -95,8 +88,8 @@ if [ ${numa_mode} == "throughput" ]; then
     num_instances=1
     batch_size=$(echo "${cores_per_node} * 2" | bc)
 elif [ ${numa_mode} == "latency" ]; then
-    ncpi=1
-    num_instances=${cores_per_node}
+    ncpi=4
+    num_instances=10
     batch_size=1
 elif [ ${numa_mode} == "multi_instance" ]; then
     ncpi=4
@@ -104,12 +97,32 @@ elif [ ${numa_mode} == "multi_instance" ]; then
     batch_size=1
 fi
 
-numa_launch_header=" python -m numa_launcher --ninstances ${num_instances} --ncore_per_instance ${ncpi} "
+export OUTPUT_DIR="$(pwd)/logs"
+
+if [ ${sw_stack} == "openvino" ]; then
+    numa_launch_header="python -m numa_launcher --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --disable_iomp --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
+else
+    numa_launch_header="python -m numa_launcher --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
+    export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
+    export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
+    export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
+    export KMP_AFFINITY="granularity=fine,compact,1,0"
+    export KMP_BLOCKTIME=1
+    export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
+    export KMP_SETTINGS=1
+fi
 
 for model in ${model_list[@]}
 do
     ${numa_launch_header} main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b ${batch_size} --precision ${precision} ${additional_options} \
     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
+    # for ((i=0;i<40;i=i+4))
+    # do
+    #     start=$i
+    #     end=${i+3}
+    #     numactl -C ${start}-${end} -m 0 /home/pnp/anaconda3/envs/molly_ov/bin/python -u main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b 80 --precision float32 --openvino --backend CPU \
+    #     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
+    # done
     throughput=$(grep "Throughput:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g' | awk 'BEGIN {sum = 0;}{sum = sum + $1;} END {printf("%.3f", sum);}')
     echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} | tee -a ./logs/summary.log
 done

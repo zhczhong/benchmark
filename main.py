@@ -19,7 +19,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torch.fx.experimental.optimization as optimization
-from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
+
 
 import pretrainedmodels.utils
 
@@ -357,6 +357,7 @@ def main_worker(gpu, ngpus_per_node, args):
             model = ipex.optimize(model, dtype=torch.float32, inplace=True)
         print("Running with IPEX {}...".format(args.precision))
     if args.openvino:
+        from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
         if args.precision == "float32": 
             provider_options = OpenVINOProviderOptions(
                     backend=args.backend, precision="FP32")
