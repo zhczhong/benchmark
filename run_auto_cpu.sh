@@ -78,22 +78,22 @@ fi
 
 sockets_num=$(lscpu |grep 'Socket(s):' |sed 's/[^0-9]//g')
 cores_per_socket=$(lscpu |grep 'Core(s) per socket:' |sed 's/[^0-9]//g')
-phsical_cores_num=$( echo "${sockets_num} * ${cores_per_socket}" |bc )
+phsical_cores_num=`expr ${sockets_num} \* ${cores_per_socket}`
 numa_nodes_num=$(lscpu |grep 'NUMA node(s):' |sed 's/[^0-9]//g')
-cores_per_node=$( echo "${phsical_cores_num} / ${numa_nodes_num}" |bc )
+cores_per_node=`expr ${phsical_cores_num} / ${numa_nodes_num}`
 cpu_model="$(lscpu |grep 'Model name:' |sed 's/.*: *//')"
 
 if [ ${numa_mode} == "throughput" ]; then
     ncpi=${cores_per_node}
     num_instances=1
-    batch_size=$(echo "${cores_per_node} * 2" | bc)
+    batch_size=`expr ${cores_per_node} \* 2`
 elif [ ${numa_mode} == "latency" ]; then
     ncpi=4
     num_instances=10
     batch_size=1
 elif [ ${numa_mode} == "multi_instance" ]; then
     ncpi=4
-    num_instances=$(echo "${cores_per_node} / ${ncpi}" | bc)
+    num_instances=`expr ${cores_per_node} / ${ncpi}`
     batch_size=1
 fi
 
