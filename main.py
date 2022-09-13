@@ -145,7 +145,8 @@ parser.add_argument("--reduce_range", action='store_true',
                     help="change the reduce_ranged used in ipex qconfig, default is False")
 parser.add_argument("--backend", type=str,
                     help="OpenVINO target device (CPU, GPU).")
-
+parser.add_argument("--ipex_op", action='store_true',
+                    help="using Ipex optimization without code change")
 
 args = parser.parse_args()
 
@@ -349,13 +350,14 @@ def main_worker(gpu, ngpus_per_node, args):
         model = optimization.fuse(model, inplace=True)
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
-    if args.ipex:
+    if  args.ipex or args.ipex_op:
         import intel_extension_for_pytorch as ipex
-        if args.precision in ["bfloat16", "bfloat16_brutal"]:
-            model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True)
-        elif args.precision == "float32":
-            model = ipex.optimize(model, dtype=torch.float32, inplace=True)
-        print("Running with IPEX {}...".format(args.precision))
+        if args.ipex:     
+            if args.precision in ["bfloat16", "bfloat16_brutal"]:
+                model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True)
+            elif args.precision == "float32":
+                model = ipex.optimize(model, dtype=torch.float32, inplace=True)
+            print("Running with IPEX {}...".format(args.precision))
     if args.openvino:
         from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
         if args.precision == "float32": 

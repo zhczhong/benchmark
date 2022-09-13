@@ -74,6 +74,9 @@ fi
 if [ ${sw_stack} == "openvino" ]; then
     additional_options="${additional_options} --openvino --channels_last 1 --backend CPU"
 fi
+if [ ${sw_stack} == "ipex_op" ]; then
+    additional_options="${additional_options} --ipex --channels_last 1"
+fi
 
 
 sockets_num=$(lscpu |grep 'Socket(s):' |sed 's/[^0-9]//g')
@@ -101,8 +104,8 @@ export OUTPUT_DIR="$(pwd)/logs"
 
 if [ ${sw_stack} == "openvino" ]; then
     numa_launch_header="python -m numa_launcher --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --disable_iomp --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
-else
-    numa_launch_header="python -m numa_launcher --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
+elif [ ${sw_stack} == "ipex" ]; then
+    numa_launch_header="python -m intel_extension_for_pytorch.cpu.launch --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
     export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
     export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
     export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
@@ -110,6 +113,16 @@ else
     export KMP_BLOCKTIME=1
     export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
     export KMP_SETTINGS=1
+elif [ ${sw_stack} == "ipex_op" ]; then
+    numa_launch_header="python -m intel_extension_for_pytorch.cpu.launch --node_id 1 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack} --auto_ipex --dtype ${precision}"
+    export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
+    export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
+    export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
+    export KMP_AFFINITY="granularity=fine,compact,1,0"
+    export KMP_BLOCKTIME=1
+    export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
+    export KMP_SETTINGS=1
+
 fi
 
 for model in ${model_list[@]}
