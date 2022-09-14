@@ -723,8 +723,6 @@ def validate(val_loader, model, criterion, args):
             if args.to_mkldnn and args.evaluate:
                 model_oob = torch.utils.mkldnn.to_mkldnn(model_oob)
             model, images = model_oob, input_oob
-            # Convert to Contiguous Tensor.
-            images = images.contiguous()
 
             for i in range(iterations + warmup):
                 if i >= warmup:
