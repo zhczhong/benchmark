@@ -123,7 +123,7 @@ elif [ ${sw_stack} == "ipex_op" ]; then
     export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
     export KMP_SETTINGS=1
 else
-    numa_launch_header=" python -m numa_launcher --ninstances ${num_instances} --ncore_per_instance ${ncpi} "
+    numa_launch_header=" python -m numa_launcher --node_id 0 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
 fi
 
 for model in ${model_list[@]}
