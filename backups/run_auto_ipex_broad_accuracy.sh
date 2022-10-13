@@ -29,7 +29,6 @@ export KMP_BLOCKTIME=1
 export DNNL_PRIMITIVE_CACHE_CAPACITY=1024
 export KMP_SETTINGS=1
 
-rm -rf logs
 mkdir logs
 
 for model in ${MODEL_NAME_LIST[@]}
