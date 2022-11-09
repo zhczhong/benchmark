@@ -33,7 +33,8 @@ if [ ${model_all} == "key" ]; then
     model_all="\
         alexnet,\
         densenet161,\
-        efficientnet_b3,\
+        efficientnet_b0,\
+        efficientnet_b5,\
         fbnetc_100,\
         googlenet,\
         inception_v3,\
