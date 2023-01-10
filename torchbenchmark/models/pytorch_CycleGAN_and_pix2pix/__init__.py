@@ -66,3 +66,14 @@ class Model(BenchmarkModel):
         model, example_inputs = self.get_module()
         out = model(*example_inputs)
         return (out, )
+
+    def jit_callback(self):
+        ctx = torch.cpu.amp.autocast(
+            cache_enabled=False, dtype=self.datatype) if self.datatype != torch.float else torch.cpu.amp.autocast(enabled=False)
+        with ctx:
+            import intel_extension_for_pytorch as ipex
+            with torch.no_grad():
+                self.model = self.model.to(memory_format=torch.channels_last)
+                self.model = torch.jit.trace(
+                    self.model, *self.input).eval()
+            self.model = torch.jit.freeze(self.model)

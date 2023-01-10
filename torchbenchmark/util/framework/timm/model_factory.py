@@ -91,3 +91,14 @@ class TimmModel(BenchmarkModel):
             with self.amp_context():
                 out = self._step_eval()
         return (out, )
+
+    def jit_callback(self):
+        ctx = torch.cpu.amp.autocast(
+            cache_enabled=False, dtype=self.datatype) if self.datatype != torch.float else torch.cpu.amp.autocast(enabled=False)
+        with ctx:
+            import intel_extension_for_pytorch as ipex
+            with torch.no_grad():
+                self.model = self.model.to(memory_format=torch.channels_last)
+                self.model = torch.jit.trace(
+                    self.model, self.example_inputs).eval()
+            self.model = torch.jit.freeze(self.model)

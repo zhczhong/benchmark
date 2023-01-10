@@ -119,6 +119,7 @@ class BenchmarkModel(metaclass=PostInitProcessor):
         else:
             self.dynamo = False
             self.opt_args, self.extra_args = parse_opt_args(self, opt_args)
+        self.datatype = torch.bfloat16 if self.opt_args.datatypes == "bf16" else torch.float32
 
     # Run the post processing for model acceleration
     def __post__init__(self):
@@ -153,7 +154,7 @@ class BenchmarkModel(metaclass=PostInitProcessor):
             apply_torchdynamo_args(self, self.opt_args, self.dargs.precision)
         else:
             apply_opt_args(self, self.opt_args, self.extra_args)
-        if should_check_correctness:
+        if should_check_correctness and self.datatype != torch.bfloat16:
             # tensorrt or fp16 is known to generate less-accurate results
             # in this case, use more relaxed cosine similarity instead of torch.allclose
             # for correctness testing
@@ -340,3 +341,14 @@ class BenchmarkModel(metaclass=PostInitProcessor):
         torch._C._set_graph_executor_optimize(True)
 
         bench_allclose(base, opt)
+        
+    def jit_callback(self):
+        ctx = torch.cpu.amp.autocast(
+            cache_enabled=False, dtype=self.datatype) if self.datatype != torch.float else torch.cpu.amp.autocast(enabled=False)
+        with ctx:
+            import intel_extension_for_pytorch as ipex
+            with torch.no_grad():
+                self.model = self.model.to(memory_format=torch.channels_last)
+                self.model = torch.jit.trace(
+                    self.model, *self.example_inputs).eval()
+            self.model = torch.jit.freeze(self.model)
