@@ -134,12 +134,15 @@ def main():
                         type=str,
                         default="all",
                         choices=vision_model_list)
-    parser.add_argument("--output_path", type=str, default="./report.csv")
+    parser.add_argument("--output_path", type=str, default="default")
     parser.add_argument("--datatypes",
                         type=str,
                         default="f32",
                         choices=["f32", "bf16"])
     args = parser.parse_args()
+
+    if args.output_path == "default":
+        args.output_path = "./" + args.backend + "_" + args.datatypes + "_" + "report.csv"
 
     cpu_cores = get_cpu_cores()
     is_amx = is_running_on_amx()
