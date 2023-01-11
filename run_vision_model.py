@@ -33,28 +33,7 @@ vision_model_list = [
     'timm_efficientnet', 'timm_regnet', 'timm_vision_transformer',
     'timm_vision_transformer_large', "vgg16"
 ]
-
-
-def get_onednn_multi_instance_gflops_time(log):
-    gflops, time = "", ""
-    time_list, gflops_list = [], []
-    gflops_reg = re.compile(r'^Gflops\s*:\s*([0-9\.]+)$')
-    time_reg = re.compile(r'^Time\(ms\)\s*:\s*([0-9\.]+)$')
-    for line in log:
-        gflops = re.search(gflops_reg, line)
-        time = re.search(time_reg, line)
-        if gflops:
-            gflops_list.append(float(gflops.group(1)))
-        if time:
-            time_list.append(float(time.group(1)))
-    time_list.sort()
-    gflops_list.sort()
-    # Remove the highest value and the lowest value, and then take the average.
-    time_list = time_list[1:-1]
-    gflops_list = gflops_list[1:-1]
-    if not len(time_list) or not len(gflops_list):
-        return "failed", "failed"
-    return str(np.mean(gflops_list)), str(np.mean(time_list))
+vision_model_list = ["alexnet"]
 
 
 def get_cpu_cores():
@@ -82,9 +61,30 @@ def is_running_on_amx():
         return False
 
 
+def get_code_name():
+    model_name = "unknown"
+    family = "unknown"
+    stepping = "unknown"
+
+    with subprocess.Popen(["lscpu"],
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          bufsize=1,
+                          universal_newlines=True) as p:
+        for line in p.stdout:
+            if "Model name" in line:
+                model_name = line.split(":")[1].lstrip().rstrip("\n")
+            if "CPU family" in line:
+                family = line.split(":")[1].lstrip().rstrip("\n")
+            if "Stepping" in line:
+                stepping = line.split(":")[1].lstrip().rstrip("\n")
+    name = model_name.replace(" ", "_") + "_" + family + "_" + stepping
+    return name
+
+
 def run(args):
     dataframe = pd.DataFrame(
-        columns=["model", "backend", "time/ms", "throughput"])
+        columns=["model", "backend", "batch_size", "time/ms", "throughput"])
     bench_cmd = [
         "python", "-m", "intel_extension_for_pytorch.cpu.launch",
         "--use_default_allocator", "--throughput_mode", "--benchmark",
@@ -106,14 +106,18 @@ def run(args):
             time = "failed"
             throughput = "failed"
             correctness = "false"
+            batch_size = "unknown"
             for out_line in p.stdout:
                 print(out_line)
                 if "CPU Total Wall Time" in out_line:
                     time = re.findall("\d+.\d+", out_line)[0].strip(' ')
                 if "Throughtput" in out_line:
                     throughput = re.findall("\d+.\d+", out_line)[0].strip(' ')
-            new_row["model"] = model_name
+                if "batch size" in out_line:
+                    batch_size = re.findall("\d+", out_line)[0].strip(' ')
+            new_row["model"] = model_name + "_bs" + batch_size
             new_row["backend"] = args.backend
+            new_row["batch_size"] = batch_size
             new_row["time/ms"] = time
             new_row["throughput"] = throughput
             print(new_row.values())
@@ -142,7 +146,8 @@ def main():
     args = parser.parse_args()
 
     if args.output_path == "default":
-        args.output_path = "./" + args.backend + "_" + args.datatypes + "_" + "report.csv"
+        args.output_path = "./" + get_code_name() + "_" + args.backend + \
+            "_" + args.datatypes + "_" + "report.csv"
 
     cpu_cores = get_cpu_cores()
     is_amx = is_running_on_amx()
