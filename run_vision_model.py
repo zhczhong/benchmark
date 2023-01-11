@@ -33,7 +33,6 @@ vision_model_list = [
     'timm_efficientnet', 'timm_regnet', 'timm_vision_transformer',
     'timm_vision_transformer_large', "vgg16"
 ]
-vision_model_list = ["alexnet"]
 
 
 def get_cpu_cores():
