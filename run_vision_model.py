@@ -82,8 +82,10 @@ def get_code_name():
 
 
 def run(args):
-    dataframe = pd.DataFrame(
-        columns=["model", "backend", "batch_size", "time/ms", "throughput"])
+    dataframe = pd.DataFrame(columns=[
+        "model", "backend", "batch_size", "time/ms", "throughput",
+        "correctness"
+    ])
     bench_cmd = [
         "python", "-m", "intel_extension_for_pytorch.cpu.launch",
         "--use_default_allocator", "--throughput_mode", "--benchmark",
@@ -104,7 +106,7 @@ def run(args):
             print(" ".join(cmd))
             time = "failed"
             throughput = "failed"
-            correctness = "false"
+            correctness = "Not support"
             batch_size = "unknown"
             for out_line in p.stdout:
                 print(out_line)
@@ -114,11 +116,15 @@ def run(args):
                     throughput = re.findall("\d+.\d+", out_line)[0].strip(' ')
                 if "batch size" in out_line:
                     batch_size = re.findall("\d+", out_line)[0].strip(' ')
+                if "Correctness" in out_line:
+                    correctness = out_line.split(":")[1].lstrip(' ').rstrip(
+                        '\n')
             new_row["model"] = model_name + "_bs" + batch_size
             new_row["backend"] = args.backend
             new_row["batch_size"] = batch_size
             new_row["time/ms"] = time
             new_row["throughput"] = throughput
+            new_row["correctness"] = correctness
             print(new_row.values())
             dataframe.loc[len(dataframe.index)] = new_row.values()
     print(dataframe)
