@@ -135,6 +135,10 @@ parser.add_argument("--int8_mkldnn", action='store_true',
                     help="using int8_mkldnn engine")
 parser.add_argument("--torchdynamo_ipex", action='store_true',
                     help="using torchdynamo with ipex backend")
+parser.add_argument("--torchdynamo_inductor", action='store_true',
+                    help="using torchdynamo with inductor backend")
+parser.add_argument("--torchdynamo_onnxrt", action='store_true',
+                    help="using torchdynamo with onnxrt backend")                   
 parser.add_argument("--fx", action='store_true',
                     help="using fx.optimization.fuse")
 parser.add_argument("--torchdynamo_fx", action='store_true',
@@ -199,6 +203,7 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
+    import torch
     global best_acc1
     args.gpu = gpu
 
@@ -358,6 +363,25 @@ def main_worker(gpu, ngpus_per_node, args):
             elif args.precision == "float32":
                 model = ipex.optimize(model, dtype=torch.float32, inplace=True)
             print("Running with IPEX {}...".format(args.precision))
+    if args.torchdynamo_ipex:
+        import torch._dynamo
+        torch._dynamo.reset()
+        model = torch.compile(model, backend='ipex')     
+        print("Running with Torchdynamo IPEX {}...".format(args.precision))
+   
+    if args.torchdynamo_inductor:
+        import torch._dynamo
+        torch._dynamo.reset()
+        model = torch.compile(model, backend='inductor')
+        print("Running with Torchdynamo Inductor {}...".format(args.precision))
+    
+    if args.torchdynamo_onnxrt:
+        import torch._dynamo
+        torch._dynamo.reset()
+        model = torch.compile(model, backend='onnxrt')
+        print("Running with Torchdynamo onnxrt {}...".format(args.precision))
+    
+    
     if args.openvino:
         from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
         if args.precision == "float32": 
@@ -733,24 +757,24 @@ def validate(val_loader, model, criterion, args):
                     target = target.cuda(args.gpu, non_blocking=True)
                 # compute output
 
-                if args.torchdynamo_ipex:
-                    import torchdynamo
-                    from torchdynamo.optimizations import backends
-                    if args.precision == "float32":
-                        with torchdynamo.optimize(backends.ipex_fp32), torch.no_grad():
-                            if args.profile:
-                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
-                                    output = model(images)
-                            else:
-                                output = model(images)
-                    if args.precision in ["bfloat16", "bfloat16_brutal"]:
-                        with torchdynamo.optimize(backends.ipex_bf16), torch.no_grad(), torch.cpu.amp.autocast():
-                            if args.profile:
-                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
-                                    output = model(images)
-                            else:
-                                output = model(images)
-                elif args.torchdynamo_fx:
+                # if args.torchdynamo_ipex:
+                #     import torchdynamo
+                #     from torchdynamo.optimizations import backends
+                #     if args.precision == "float32":
+                #         with torchdynamo.optimize(backends.ipex_fp32), torch.no_grad():
+                #             if args.profile:
+                #                 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                #                     output = model(images)
+                #             else:
+                #                 output = model(images)
+                #     if args.precision in ["bfloat16", "bfloat16_brutal"]:
+                #         with torchdynamo.optimize(backends.ipex_bf16), torch.no_grad(), torch.cpu.amp.autocast():
+                #             if args.profile:
+                #                 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                #                     output = model(images)
+                #             else:
+                #                 output = model(images)
+                if args.torchdynamo_fx:
                     from typing import List
                     import torchdynamo
                     def fx_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):

@@ -8,5 +8,6 @@ conda install -y numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing
 pip install --no-deps Pillow munch tqdm six numpy typing-extensions geffnet torchvision onnx onnxruntime-openvino onnxruntime-training psutil
 #pip install torch-ort
 #pip install torch-ort-infer
+pip install cerberus flatbuffers h5py packaging protobuf google
 python pretrain_setup.py install
 rm -rf build dist pretrainedmodels.egg-info

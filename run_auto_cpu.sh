@@ -69,6 +69,14 @@ fi
 if [ ${sw_stack} == "torchdynamo_ipex" ]; then
     additional_options="${additional_options} --torchdynamo_ipex --channels_last 1 "
 fi
+if [ ${sw_stack} == "torchdynamo_inductor" ]; then
+    additional_options="${additional_options} --torchdynamo_inductor --channels_last 1 "
+fi
+if [ ${sw_stack} == "torchdynamo_onnxrt" ]; then
+    additional_options="${additional_options} --torchdynamo_onnxrt --channels_last 1 "
+fi
+
+
 if [ ${sw_stack} == "int8_ipex" ]; then
     additional_options="${additional_options} --channels_last 1 --jit "
 fi
