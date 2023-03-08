@@ -149,9 +149,10 @@ parser.add_argument("--reduce_range", action='store_true',
                     help="change the reduce_ranged used in ipex qconfig, default is False")
 parser.add_argument("--backend", type=str,
                     help="OpenVINO target device (CPU, GPU).")
-parser.add_argument("--ipex_op", action='store_true',
+parser.add_argument("--ipex_op", action='store_true', default=False,
                     help="using Ipex optimization without code change")
-
+parser.add_argument("--graph_mode", type=bool, default=False,
+                    help="using Ipex graph mode")
 args = parser.parse_args()
 
 if args.ipex:
@@ -356,30 +357,31 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
     if  args.ipex or args.ipex_op:
+        print('[Info]Running ipex optmizetion with Graph_mode=', args.graph_mode)
         import intel_extension_for_pytorch as ipex
         if args.ipex:     
             if args.precision in ["bfloat16", "bfloat16_brutal"]:
-                model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True)
+                model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True, graph_mode=args.graph_mode)
             elif args.precision == "float32":
-                model = ipex.optimize(model, dtype=torch.float32, inplace=True)
-            print("Running with IPEX {}...".format(args.precision))
+                model = ipex.optimize(model, dtype=torch.float32, inplace=True, graph_mode=args.graph_mode)
+            print("[Info]Running with IPEX {}...".format(args.precision))
     if args.torchdynamo_ipex:
         import torch._dynamo
         torch._dynamo.reset()
         model = torch.compile(model, backend='ipex')     
-        print("Running with Torchdynamo IPEX {}...".format(args.precision))
+        print("[Info]Running with Torchdynamo IPEX {}...".format(args.precision))
    
     if args.torchdynamo_inductor:
         import torch._dynamo
         torch._dynamo.reset()
         model = torch.compile(model, backend='inductor')
-        print("Running with Torchdynamo Inductor {}...".format(args.precision))
+        print("[Info]Running with Torchdynamo Inductor {}...".format(args.precision))
     
     if args.torchdynamo_onnxrt:
         import torch._dynamo
         torch._dynamo.reset()
         model = torch.compile(model, backend='onnxrt')
-        print("Running with Torchdynamo onnxrt {}...".format(args.precision))
+        print("[Info]Running with Torchdynamo onnxrt {}...".format(args.precision))
     
     
     if args.openvino:

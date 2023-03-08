@@ -76,7 +76,9 @@ if [ ${sw_stack} == "torchdynamo_onnxrt" ]; then
     additional_options="${additional_options} --torchdynamo_onnxrt --channels_last 1 "
 fi
 
-
+if [ ${sw_stack} == "torchdynamo_ipex_op2" ]; then
+      additional_options="${additional_options} --torchdynamo_ipex --channels_last 1 --ipex"
+fi
 if [ ${sw_stack} == "int8_ipex" ]; then
     additional_options="${additional_options} --channels_last 1 --jit "
 fi
@@ -86,7 +88,12 @@ fi
 if [ ${sw_stack} == "ipex_op" ]; then
     additional_options="${additional_options} --ipex --channels_last 1"
 fi
-
+if [ ${sw_stack} == "torchdynamo_ipex_op3" ]; then
+     additional_options="${additional_options}  --torchdynamo_ipex  --ipex --channels_last 1 --graph_mode True "
+fi
+if [ ${sw_stack} == "ipex_graphmode" ]; then
+      additional_options="${additional_options} --ipex --channels_last 1 --graph_mode True "
+fi
 
 sockets_num=$(lscpu |grep 'Socket(s):' |sed 's/[^0-9]//g')
 cores_per_socket=$(lscpu |grep 'Core(s) per socket:' |sed 's/[^0-9]//g')
@@ -144,4 +151,4 @@ do
     echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} | tee -a ./logs/summary.log
 done
 
-cat ./logs/summary.log
+#cat ./logs/summary.log
