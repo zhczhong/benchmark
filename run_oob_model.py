@@ -70,7 +70,11 @@ timm_vision_model_list = [
     "fbnetc_100", "spnasnet_100", "vit_small_patch16_224",
     "vit_giant_patch14_224", "regnety_120", "resnest14d", "efficientnet_b0"
 ]
-vision_model_list = torch_vision_classification_model_list
+vision_model_list = {
+    "torchvision": torch_vision_classification_model_list,
+    "timm": timm_vision_model_list,
+    "torchbench": torch_bench_vision_model_list
+}
 
 
 def get_cpu_cores():
@@ -122,68 +126,74 @@ def get_code_name():
 
 def run(args):
     dataframe = pd.DataFrame(columns=[
-        "model", "batch_size", "core_per_instance", "datatypes",
-        "throughput_per_instance(GC enable)",
+        "model", "model_source", "batch_size", "core_per_instance",
+        "datatypes", "throughput_per_instance(GC enable)",
         "throughput_per_instance(GC disable)"
     ])
 
     cpu_cores = get_cpu_cores()
-    num_instance = cpu_cores // args.core_per_instance
     datatypes = ["f32", "bfloat16", "int8"]
-    for dtype in datatypes:
-        for model_source in ["torchvision", "timm", "torchbench"]:
-            for model_name in vision_model_list[model_source]:
-                bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
-                    batch_size=args.batch_size,
-                    model_name=model_name,
-                    data_type=dtype,
-                    model_source=model_source,
-                    number_instance=num_instance)
-                cmd = bench_cmd.split(" ")
-                new_row = {}
-                new_row["model"] = model_name
-                new_row["batch_size"] = args.batch_size
-                new_row["core_per_instance"] = args.core_per_instance
-                new_row["datatypes"] = dtype
-                os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "0"
-                with subprocess.Popen(cmd,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      bufsize=1,
-                                      universal_newlines=True) as p:
-                    print(" ".join(cmd))
-                    throughput = "failed"
-                    for out_line in p.stdout:
-                        print(out_line)
-                        if "inference throughput on master instance" in out_line:
-                            throughput = re.findall("\d+.\d+",
-                                                    out_line)[0].strip(' ')
-                    new_row["throughput_per_instance(GC enable)"] = throughput
+    for core_per_instance_bs_pair in [(4, 1), (cpu_cores, 112)]:
+        core_per_instance = core_per_instance_bs_pair[0]
+        bs = core_per_instance_bs_pair[1]
+        num_instance = cpu_cores // core_per_instance
+        os.environ["OMP_NUM_THREADS"] = str(core_per_instance)
+        for dtype in datatypes:
+            for model_source in ["torchvision", "timm", "torchbench"]:
+                for model_name in vision_model_list[model_source]:
+                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
+                        batch_size=bs,
+                        model_name=model_name,
+                        data_type=dtype,
+                        model_source=model_source,
+                        number_instance=num_instance)
+                    cmd = bench_cmd.split(" ")
+                    new_row = {}
+                    new_row["model"] = model_name
+                    new_row["model_source"] = model_source
+                    new_row["batch_size"] = bs
+                    new_row["core_per_instance"] = core_per_instance
+                    new_row["datatypes"] = dtype
+                    os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "0"
+                    with subprocess.Popen(cmd,
+                                          stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE,
+                                          bufsize=1,
+                                          universal_newlines=True) as p:
+                        print(" ".join(cmd))
+                        throughput = "failed"
+                        for out_line in p.stdout:
+                            print(out_line)
+                            if "inference throughput on master instance" in out_line:
+                                throughput = re.findall("\d+.\d+",
+                                                        out_line)[0].strip(' ')
+                        new_row[
+                            "throughput_per_instance(GC enable)"] = throughput
 
-                os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "1"
-                with subprocess.Popen(cmd,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      bufsize=1,
-                                      universal_newlines=True) as p:
-                    print(" ".join(cmd))
-                    time = "failed"
-                    throughput = "failed"
-                    for out_line in p.stdout:
-                        print(out_line)
-                        if "inference throughput on master instance" in out_line:
-                            throughput = re.findall("\d+.\d+",
-                                                    out_line)[0].strip(' ')
-                    new_row["throughput_per_instance(GC disable)"] = throughput
-                    print(new_row.values())
-                dataframe.loc[len(dataframe.index)] = new_row.values()
-                dataframe.to_csv(args.output_path)
+                    os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "1"
+                    with subprocess.Popen(cmd,
+                                          stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE,
+                                          bufsize=1,
+                                          universal_newlines=True) as p:
+                        print(" ".join(cmd))
+                        time = "failed"
+                        throughput = "failed"
+                        for out_line in p.stdout:
+                            print(out_line)
+                            if "inference throughput on master instance" in out_line:
+                                throughput = re.findall("\d+.\d+",
+                                                        out_line)[0].strip(' ')
+                        new_row[
+                            "throughput_per_instance(GC disable)"] = throughput
+                        print(new_row.values())
+                    dataframe.loc[len(dataframe.index)] = new_row.values()
+                    dataframe.to_csv(args.output_path)
     print(dataframe)
     dataframe.to_csv(args.output_path)
 
 
 def main():
-    cpu_cores = get_cpu_cores()
     # parse parameters
     parser = argparse.ArgumentParser(
         description="Vision Model Performance Evaluation")
@@ -192,8 +202,6 @@ def main():
                         default="all",
                         choices=vision_model_list)
     parser.add_argument("--output_path", type=str, default="default")
-    parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--core_per_instance", type=int, default=cpu_cores)
     args = parser.parse_args()
 
     if args.output_path == "default":
@@ -202,7 +210,6 @@ def main():
     is_amx = is_running_on_amx()
     os.environ["KMP_AFFINITY"] = "granularity=fine,compact,1,0"
     os.environ["KMP_BLOCKTIME"] = "1"
-    os.environ["OMP_NUM_THREADS"] = str(args.core_per_instance)
     os.environ[
         "LD_PRELOAD"] = "$HOME/ipex_env/miniconda/envs/ipex_env/lib/libiomp5.so:$HOME/ipex_env/miniconda/envs/ipex_env/lib/libjemalloc.so"
     os.environ[

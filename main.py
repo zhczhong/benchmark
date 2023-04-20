@@ -430,7 +430,7 @@ def run_weights_sharing_model(m,
         x = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
     if args.precision == "bfloat16":
         x = x.to(torch.bfloat16)
-    if args.ipex:
+    if args.ipex and args.precision != "int8":
         x = x.contiguous(memory_format=torch.channels_last)
 
     with torch.no_grad():
@@ -528,7 +528,7 @@ def validate(val_loader, model, criterion, args, example_input):
                 # print("End convert to onnx!")
 
                 model_oob, input_oob = model, images
-                if args.channels_last:
+                if args.channels_last and args.precision != "int8":
                     model_oob, input_oob = model, images
                     model_oob = model_oob.to(memory_format=torch.channels_last)
                     input_oob = input_oob.to(memory_format=torch.channels_last)
