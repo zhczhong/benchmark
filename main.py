@@ -19,8 +19,6 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 
-torch._C._jit_set_autocast_mode(False)
-
 params_dict = {
     # Coefficients:   width,depth,res,dropout
     'efficientnet_b0': (1.0, 1.0, 224, 0.2),
@@ -483,7 +481,7 @@ def validate(val_loader, model, criterion, args, example_input):
 
     with torch.no_grad():
         if args.llga:
-            torch._C._jit_set_llga_enabled(True)
+            import intel_extension_for_pytorch as ipex
             if example_input is None:
                 example_input = torch.rand(args.batch_size, 3, args.image_size,
                                            args.image_size)
@@ -491,7 +489,6 @@ def validate(val_loader, model, criterion, args, example_input):
                 import torch.fx.experimental.optimization as optimization
                 with torch.cpu.amp.autocast(cache_enabled=False):
                     model = model.eval()
-                    model = optimization.fuse(model)
                     try:
                         model = torch.jit.trace(model, example_input)
                     except:
