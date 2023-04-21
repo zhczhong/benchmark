@@ -130,7 +130,7 @@ def run(args):
         for dtype in datatypes:
             for model_source in ["torchvision", "timm", "torchbench"]:
                 for model_name in vision_model_list[model_source]:
-                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 10 -b {batch_size} -i 20 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
+                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
                         batch_size=bs,
                         model_name=model_name,
                         data_type=dtype,
