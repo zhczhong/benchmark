@@ -236,8 +236,13 @@ parser.add_argument(
     help=
     "the instance numbers for test the performance of latcy, only works when enable weight-sharing"
 )
+parser.add_argument("--check_correctness",
+                    action='store_true',
+                    help="check correctness.")
 
 args = parser.parse_args()
+MAIN_RANDOM_SEED = 1
+model_eager = None
 
 if args.ipex:
     import intel_extension_for_pytorch as ipex
@@ -249,6 +254,7 @@ if args.ipex:
 
 
 def main():
+    global model_eager
     args = parser.parse_args()
     print(args)
 
@@ -257,6 +263,7 @@ def main():
         torch.manual_seed(args.seed)
 
     model, example_input = get_model(args.arch, args)
+    model_eager = model
 
     criterion = nn.CrossEntropyLoss()
 
@@ -333,6 +340,7 @@ def main():
                 prepared_model(d)
             converted_model = convert(prepared_model)
             model = converted_model
+            model_eager = model
 
         validate(val_loader, model, criterion, args, example_input)
         return
@@ -462,7 +470,115 @@ def run_weights_sharing_model(m,
             (tid, avg_time, fps))
 
 
+def set_random_seed():
+    import torch
+    import random
+    import numpy
+    torch.manual_seed(MAIN_RANDOM_SEED)
+    random.seed(MAIN_RANDOM_SEED)
+    numpy.random.seed(MAIN_RANDOM_SEED)
+
+
+# copied from https://github.com/pytorch/torchdynamo/blob/main/torchdynamo/utils.py#L411
+
+
+def same(a, b, cos_similarity=False, atol=1e-4, rtol=1e-4, equal_nan=False):
+    """Check correctness to see if a and b match"""
+    import torch
+    import math
+    if isinstance(a, (list, tuple, torch.nn.ParameterList, torch.Size)):
+        assert isinstance(b,
+                          (list, tuple)), f"type mismatch {type(a)} {type(b)}"
+        return len(a) == len(b) and all(
+            same(ai, bi, cos_similarity, atol, rtol, equal_nan)
+            for ai, bi in zip(a, b))
+    elif isinstance(a, dict):
+        assert isinstance(b, dict)
+        assert set(a.keys()) == set(
+            b.keys()), f"keys mismatch {set(a.keys())} == {set(b.keys())}"
+        for k in a.keys():
+            if not (same(
+                    a[k], b[k], cos_similarity, atol, rtol,
+                    equal_nan=equal_nan)):
+                print("Accuracy failed for key name", k)
+                return False
+        return True
+    elif isinstance(a, torch.Tensor):
+        if a.is_sparse:
+            assert b.is_sparse
+            a = a.to_dense()
+            b = b.to_dense()
+        if not isinstance(b, torch.Tensor):
+            return False
+        if cos_similarity:
+            # TRT will bring error loss larger than current threshold. Use cosine similarity as replacement
+            a = a.flatten().to(torch.float32)
+            b = b.flatten().to(torch.float32)
+            res = torch.nn.functional.cosine_similarity(a, b, dim=0, eps=1e-6)
+            if res < 0.99:
+                print(f"Similarity score={res.cpu().detach().item()}")
+            return res >= 0.99
+        else:
+            return torch.allclose(a,
+                                  b,
+                                  atol=atol,
+                                  rtol=rtol,
+                                  equal_nan=equal_nan)
+    elif isinstance(a, (str, int, type(None), bool, torch.device)):
+        return a == b
+    elif isinstance(a, float):
+        return math.isclose(a, b, rel_tol=rtol, abs_tol=atol)
+    elif is_numpy_int_type(a) or is_numpy_float_type(a):
+        return (type(a) is type(b)) and (a == b)
+    elif is_numpy_ndarray(a):
+        return (type(a) is type(b)) and same(
+            torch.from_numpy(a), torch.from_numpy(b), cos_similarity, atol,
+            rtol, equal_nan)
+    elif type(a).__name__ in (
+            "MaskedLMOutput",
+            "Seq2SeqLMOutput",
+            "CausalLMOutputWithCrossAttentions",
+            "LongformerMaskedLMOutput",
+            "Instances",
+            "SquashedNormal",
+            "Boxes",
+            "Normal",
+            "TanhTransform",
+            "Foo",
+            "Variable",
+    ):
+        assert type(a) is type(b)
+        return all(
+            same(getattr(a, key), getattr(b, key), cos_similarity, atol, rtol,
+                 equal_nan) for key in a.__dict__.keys())
+    else:
+        raise RuntimeError(f"unsupported type: {type(a).__name__}")
+
+
+def correctness_check(model,
+                      model_eager,
+                      example_input,
+                      cos_sim=True,
+                      rounds=10,
+                      atol=1e-4,
+                      rtol=1e-4) -> bool:
+    set_random_seed()
+    for _i in range(rounds):
+        x = torch.rand_like(example_input)
+        eager_output = model_eager(x)
+        cur_result = model(x)
+        if not same(eager_output,
+                    cur_result,
+                    cos_similarity=cos_sim,
+                    atol=atol,
+                    rtol=rtol,
+                    equal_nan=True):
+            return False
+    return True
+
+
 def validate(val_loader, model, criterion, args, example_input):
+    global model_eager
     iterations = args.iterations
     warmup = args.warmup_iterations
     batch_time = AverageMeter('Time', ':6.3f')
@@ -489,6 +605,7 @@ def validate(val_loader, model, criterion, args, example_input):
                 import torch.fx.experimental.optimization as optimization
                 with torch.cpu.amp.autocast(cache_enabled=False):
                     model = model.eval()
+                    model_eager = model.eval()
                     try:
                         model = torch.jit.trace(model, example_input)
                     except:
@@ -621,6 +738,20 @@ def validate(val_loader, model, criterion, args, example_input):
             perf = batch_size / batch_time.avg
             print('inference latency: %3.3f ms' % latency)
             print('inference throughput on master instance: %3.3f fps' % perf)
+
+        if args.check_correctness:
+            atol = 1e-3
+            rtol = 1e-3
+            result = correctness_check(model,
+                                       model_eager,
+                                       example_input,
+                                       atol=atol,
+                                       rtol=rtol)
+            if result:
+                print("Correctness result: Pass")
+            else:
+                print("Correctness result: Fail")
+
     return top1.avg
 
 

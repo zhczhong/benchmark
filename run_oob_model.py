@@ -116,8 +116,8 @@ def get_code_name():
 def run(args):
     dataframe = pd.DataFrame(columns=[
         "model", "model_source", "batch_size", "core_per_instance",
-        "datatypes", "throughput_per_instance(GC enable)",
-        "throughput_per_instance(GC disable)"
+        "datatypes", "throughput_per_instance(GC)", "Correctness(GC)",
+        "throughput_per_instance(DNNL)", "Correctness(DNNL)"
     ])
 
     cpu_cores = get_cpu_cores()
@@ -130,7 +130,7 @@ def run(args):
         for dtype in datatypes:
             for model_source in ["torchvision", "timm", "torchbench"]:
                 for model_name in vision_model_list[model_source]:
-                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
+                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance} --check_correctness".format(
                         batch_size=bs,
                         model_name=model_name,
                         data_type=dtype,
@@ -159,13 +159,17 @@ def run(args):
                                           universal_newlines=True) as p:
                         print(" ".join(cmd))
                         throughput = "failed"
+                        correctness = "fail"
                         for out_line in p.stdout:
                             print(out_line)
                             if "inference throughput on master instance" in out_line:
                                 throughput = re.findall("\d+.\d+",
                                                         out_line)[0].strip(' ')
-                        new_row[
-                            "throughput_per_instance(GC enable)"] = throughput
+                            if "Correctness result" in out_line:
+                                correctness = out_line.split(":")[-1].strip(
+                                    "\n")
+                        new_row["throughput_per_instance(GC)"] = throughput
+                        new_row["Correctness(GC)"] = correctness
 
                     os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "1"
                     with subprocess.Popen(cmd,
@@ -181,8 +185,11 @@ def run(args):
                             if "inference throughput on master instance" in out_line:
                                 throughput = re.findall("\d+.\d+",
                                                         out_line)[0].strip(' ')
-                        new_row[
-                            "throughput_per_instance(GC disable)"] = throughput
+                            if "Correctness result" in out_line:
+                                correctness = out_line.split(":")[-1].strip(
+                                    "\n")
+                        new_row["throughput_per_instance(DNNL)"] = throughput
+                        new_row["Correctness(DNNL)"] = correctness
                         print(new_row.values())
                     dataframe.loc[len(dataframe.index)] = new_row.values()
                     dataframe.to_csv(args.output_path)
