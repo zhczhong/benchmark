@@ -26,36 +26,25 @@ import pandas as pd
 import torchvision as vision
 import timm
 
-# print(timm.list_models(pretrained=True))
-
-vision_model_list = {"image_recognition": ["alexnet"]}
-
-torch_bench_vision_model_list = [
-    'alexnet', 'dcgan', 'densenet121', 'functorch_maml_omniglot',
-    'maml_omniglot', 'mnasnet1_0', 'mobilenet_v2', 'mobilenet_v3_large',
-    'phlippe_densenet', 'phlippe_resnet', 'resnet18', 'resnet50', 'resnet152',
-    'resnext50_32x4d', 'shufflenet_v2_x1_0', 'squeezenet1_1',
-    'timm_efficientnet', 'timm_regnet', 'timm_vision_transformer',
-    'timm_vision_transformer_large', "vgg16"
-]
+torch_bench_vision_model_list = ['dcgan', 'phlippe_densenet', 'phlippe_resnet']
 
 torch_vision_classification_model_list = [
     "alexnet", "convnext_tiny", "convnext_small", "convnext_base",
     "convnext_large", "densenet121", "densenet161", "densenet169",
     "densenet201", "efficientnet_b0", "efficientnet_b1", "efficientnet_b2",
     "efficientnet_b3", "efficientnet_b4", "efficientnet_b5", "efficientnet_b6",
-    "efficientnet_b7", "googlenet", "maxvit_t", "mnasnet0_5", "mnasnet0_75",
-    "mnasnet1_0", "mnasnet1_3", "inception_v3", "mobilenet_v2",
-    "mobilenet_v3_large", "mobilenet_v3_small", "resnet18", "resnet34",
-    "resnet50", "resnet101", "resnet152", 'regnet_x_16gf', 'regnet_x_1_6gf',
-    'regnet_x_32gf', 'regnet_x_3_2gf', 'regnet_x_400mf', 'regnet_x_800mf',
-    'regnet_x_8gf', 'regnet_y_16gf', 'regnet_y_1_6gf', 'regnet_y_32gf',
-    'regnet_y_3_2gf', 'regnet_y_400mf', 'regnet_y_800mf', 'regnet_y_8gf',
-    'resnext101_32x8d', 'resnext101_64x4d', 'resnext50_32x4d',
-    'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5',
-    'shufflenet_v2_x2_0', 'squeezenet1_0', 'squeezenet1_1', 'vgg11',
-    'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn',
-    'wide_resnet101_2', 'wide_resnet50_2'
+    "efficientnet_b7", "googlenet", "mnasnet0_5", "mnasnet0_75", "mnasnet1_0",
+    "mnasnet1_3", "inception_v3", "mobilenet_v2", "mobilenet_v3_large",
+    "mobilenet_v3_small", "resnet18", "resnet34", "resnet50", "resnet101",
+    "resnet152", 'regnet_x_16gf', 'regnet_x_1_6gf', 'regnet_x_32gf',
+    'regnet_x_3_2gf', 'regnet_x_400mf', 'regnet_x_800mf', 'regnet_x_8gf',
+    'regnet_y_16gf', 'regnet_y_1_6gf', 'regnet_y_32gf', 'regnet_y_3_2gf',
+    'regnet_y_400mf', 'regnet_y_800mf', 'regnet_y_8gf', 'resnext101_32x8d',
+    'resnext101_64x4d', 'resnext50_32x4d', 'shufflenet_v2_x0_5',
+    'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0',
+    'squeezenet1_0', 'squeezenet1_1', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn',
+    'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn', 'wide_resnet101_2',
+    'wide_resnet50_2'
 ]  # image_size 224, skip: "efficientnet_v2_s", "efficientnet_v2_m","efficientnet_v2_l", "'regnet_y_128gf'", 'vit_b_16','vit_b_32', 'vit_l_16', 'vit_l_32', 'swin_b', 'swin_s','swin_t', 'swin_v2_b', 'swin_v2_s', 'swin_v2_t'
 
 torch_vision_segmentation_model_list = [
@@ -141,7 +130,7 @@ def run(args):
         for dtype in datatypes:
             for model_source in ["torchvision", "timm", "torchbench"]:
                 for model_name in vision_model_list[model_source]:
-                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
+                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=1 --benchmark main.py -e --performance --pretrained -j 1 -w 10 -b {batch_size} -i 20 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance}".format(
                         batch_size=bs,
                         model_name=model_name,
                         data_type=dtype,
@@ -156,9 +145,8 @@ def run(args):
                     new_row["datatypes"] = dtype
                     os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "0"
                     if len(args.dump_graph) > 0:
-                        import os
                         path_name = args.dump_graph + \
-                            "/{model_source}/{model_name}/bs{bs}/".format(model_source=model_source,
+                            "/{dtype}/{model_source}/{model_name}/bs{bs}/".format(dtype=dtype, model_source=model_source,
                                 model_name=model_name, bs=bs)
                         if not os.path.exists(path_name):
                             os.makedirs(path_name)
