@@ -155,6 +155,15 @@ def run(args):
                     new_row["core_per_instance"] = core_per_instance
                     new_row["datatypes"] = dtype
                     os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "0"
+                    if len(args.dump_graph) > 0:
+                        import os
+                        path_name = args.dump_graph + \
+                            "/{model_source}/{model_name}/bs{bs}/".format(model_source=model_source,
+                                model_name=model_name, bs=bs)
+                        if not os.path.exists(path_name):
+                            os.makedirs(path_name)
+                        os.environ[
+                            "ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_DUMP_GRAPH_JSON"] = path_name
                     with subprocess.Popen(cmd,
                                           stdout=subprocess.PIPE,
                                           stderr=subprocess.PIPE,
@@ -202,6 +211,7 @@ def main():
                         default="all",
                         choices=vision_model_list)
     parser.add_argument("--output_path", type=str, default="default")
+    parser.add_argument("--dump_graph", type=str, default="")
     args = parser.parse_args()
 
     if args.output_path == "default":
