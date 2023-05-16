@@ -406,7 +406,7 @@ def get_model(model_name, args):
                                model_name,
                                pretrained=args.pretrained)
     model = model.eval()
-    if args.channels_last and args.precision != "int8":
+    if args.channels_last:
         model = model.to(memory_format=torch.channels_last)
     return model.eval(), example_input
 
@@ -436,7 +436,7 @@ def run_weights_sharing_model(m,
         x = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
     if args.precision == "bfloat16":
         x = x.to(torch.bfloat16)
-    if args.ipex and args.precision != "int8":
+    if args.ipex or args.channels_last:
         x = x.contiguous(memory_format=torch.channels_last)
 
     with torch.no_grad():
@@ -531,9 +531,9 @@ def same(a, b, cos_similarity=False, atol=1e-4, rtol=1e-4, equal_nan=False):
     elif is_numpy_int_type(a) or is_numpy_float_type(a):
         return (type(a) is type(b)) and (a == b)
     elif is_numpy_ndarray(a):
-        return (type(a) is type(b)) and same(
-            torch.from_numpy(a), torch.from_numpy(b), cos_similarity, atol,
-            rtol, equal_nan)
+        return (type(a)
+                is type(b)) and same(torch.from_numpy(a), torch.from_numpy(b),
+                                     cos_similarity, atol, rtol, equal_nan)
     elif type(a).__name__ in (
             "MaskedLMOutput",
             "Seq2SeqLMOutput",
@@ -642,11 +642,13 @@ def validate(val_loader, model, criterion, args, example_input):
                 # print("End convert to onnx!")
 
                 model_oob, input_oob = model, images
-                if args.channels_last and args.precision != "int8":
+                if args.channels_last:
                     model_oob, input_oob = model, images
                     model_oob = model_oob.to(memory_format=torch.channels_last)
                     input_oob = input_oob.to(memory_format=torch.channels_last)
                 model, images = model_oob, input_oob
+                print(images.shape)
+                print(images.stride())
                 for i in range(iterations + warmup):
                     if i >= warmup:
                         end = time.time()
@@ -740,6 +742,9 @@ def validate(val_loader, model, criterion, args, example_input):
             print('inference throughput on master instance: %3.3f fps' % perf)
 
         if args.check_correctness:
+            if args.channels_last:
+                example_input = example_input.to(
+                    memory_format=torch.channels_last)
             atol = 1e-3
             rtol = 1e-3
             result = correctness_check(model,
