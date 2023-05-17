@@ -130,7 +130,7 @@ def run(args):
         for dtype in datatypes:
             for model_source in ["torchvision", "timm", "torchbench"]:
                 for model_name in vision_model_list[model_source]:
-                    bench_cmd = "python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=2 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance} --check_correctness".format(
+                    bench_cmd = "timeout 5m python -m intel_extension_for_pytorch.cpu.launch --use_default_allocator --ninstance=2 --benchmark main.py -e --performance --pretrained -j 1 -w 20 -b {batch_size} -i 200 -a {model_name} --dummy --precision={data_type} --llga --model-source={model_source} --weight-sharing --number-instance={number_instance} --check_correctness".format(
                         batch_size=bs,
                         model_name=model_name,
                         data_type=dtype,
@@ -160,14 +160,25 @@ def run(args):
                         print(" ".join(cmd))
                         throughput = "failed"
                         correctness = "fail"
+                        total_throughput = 0
+                        instance_num = 0
                         for out_line in p.stdout:
                             print(out_line)
+                            if "Throughput" in out_line:
+                                instance_num += 1
+                                total_throughput += float(
+                                    re.findall(
+                                        "\d+.\d+",
+                                        out_line.split("Throughput:")[1])
+                                    [0].strip(' '))
                             if "inference throughput on master instance" in out_line:
                                 throughput = re.findall("\d+.\d+",
                                                         out_line)[0].strip(' ')
                             if "Correctness result" in out_line:
                                 correctness = out_line.split(":")[-1].strip(
                                     "\n")
+                        if instance_num > 0:
+                            throughput = total_throughput / instance_num
                         new_row["throughput_per_instance(GC)"] = throughput
                         new_row["Correctness(GC)"] = correctness
 
@@ -180,14 +191,25 @@ def run(args):
                         print(" ".join(cmd))
                         time = "failed"
                         throughput = "failed"
+                        total_throughput = 0
+                        instance_num = 0
                         for out_line in p.stdout:
                             print(out_line)
+                            if "Throughput" in out_line:
+                                instance_num += 1
+                                total_throughput += float(
+                                    re.findall(
+                                        "\d+.\d+",
+                                        out_line.split("Throughput:")[1])
+                                    [0].strip(' '))
                             if "inference throughput on master instance" in out_line:
                                 throughput = re.findall("\d+.\d+",
                                                         out_line)[0].strip(' ')
                             if "Correctness result" in out_line:
                                 correctness = out_line.split(":")[-1].strip(
                                     "\n")
+                        if instance_num > 0:
+                            throughput = total_throughput / instance_num
                         new_row["throughput_per_instance(DNNL)"] = throughput
                         new_row["Correctness(DNNL)"] = correctness
                         print(new_row.values())
