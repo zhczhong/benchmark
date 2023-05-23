@@ -143,7 +143,7 @@ def run(args):
                     new_row["batch_size"] = bs
                     new_row["core_per_instance"] = core_per_instance
                     new_row["datatypes"] = dtype
-                    os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "0"
+                    os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
                     if len(args.dump_graph) > 0:
                         path_name = args.dump_graph + \
                             "/{dtype}/{model_source}/{model_name}/bs{bs}/".format(dtype=dtype, model_source=model_source,
@@ -182,7 +182,7 @@ def run(args):
                         new_row["throughput_per_instance(GC)"] = throughput
                         new_row["Correctness(GC)"] = correctness
 
-                    os.environ["_DNNL_GRAPH_DISABLE_COMPILER_BACKEND"] = "1"
+                    os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "1"
                     with subprocess.Popen(cmd,
                                           stdout=subprocess.PIPE,
                                           stderr=subprocess.PIPE,
@@ -243,7 +243,7 @@ def main():
         "DNNL_MAX_CPU_ISA"] = "AVX512_CORE_AMX" if is_amx else "AVX512_CORE_VNNI"
     os.environ[
         "MALLOC_CONF"] = "oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
-    os.environ["_DNNL_GRAPH_FORCE_MAX_PARTITION_POLICY"] = "1"
+    os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
     run(args)
 
 
