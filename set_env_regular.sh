@@ -6,6 +6,6 @@ conda install -y jemalloc
 conda install -y numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing_extensions future six requests dataclasses psutil
 # installations
 pip install --no-deps Pillow munch tqdm six numpy typing-extensions geffnet onnx onnxruntime-openvino onnxruntime-training psutil
-pip install chardet cerberus flatbuffers h5py packaging protobuf google
+pip install chardet cerberus flatbuffers h5py packaging protobuf google chardet
 python pretrain_setup.py install
 rm -rf build dist pretrainedmodels.egg-info
