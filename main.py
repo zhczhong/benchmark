@@ -516,7 +516,7 @@ def main_worker(gpu, ngpus_per_node, args):
                         if args.channels_last:
                             images = images.contiguous(memory_format=torch.channels_last)
                         output = prepared_model(images)
-                    print ("[Info] quantization finished")
+                    print ("[Info] Calibration finished")
                 if args.save_config_file != "":
                     prepared_model.save_qconf_summary(args.save_config_file)
             else:
