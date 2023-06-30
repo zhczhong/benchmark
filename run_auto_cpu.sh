@@ -152,7 +152,7 @@ if [ ${numa_mode} == "accuracy" ];then
             -a $model \
             -b $batch_size \
             --precision ${precision} --ipex ${additional_options} 2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
-        accuracy=$(grep 'Accuracy:' ./logs/$model-IPEX-${precision}-accuracy.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
+        accuracy=$(grep 'Accuracy:' ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
         echo $model IPEX ${precision} accuracy $accuracy | tee -a ./logs/summary.log
     done
 else
