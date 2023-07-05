@@ -1,0 +1,89 @@
+diff --git a/dcgan/main.py b/dcgan/main.py
+index b426db3..7459642 100644
+--- a/dcgan/main.py
++++ b/dcgan/main.py
+@@ -2,6 +2,7 @@ from __future__ import print_function
+ import argparse
+ import os
+ import random
++import time
+ import torch
+ import torch.nn as nn
+ import torch.nn.parallel
+@@ -32,6 +33,12 @@ parser.add_argument('--netD', default='', help="path to netD (to continue traini
+ parser.add_argument('--outf', default='.', help='folder to output images and model checkpoints')
+ parser.add_argument('--manualSeed', type=int, help='manual seed')
+ parser.add_argument('--classes', default='bedroom', help='comma separated list of classes for the lsun data set')
++parser.add_argument('--inference', action='store_true', default=False)
++parser.add_argument('--num-iterations', default=500, type=int)
++parser.add_argument('--ipex', action='store_true', default=False)
++parser.add_argument('--precision', default='float32', help='Precision, "float32" or "bfloat16"')
++parser.add_argument('--jit', action='store_true', default=False)
++parser.add_argument('--profiling', action='store_true', default=False)
+ 
+ opt = parser.parse_args()
+ print(opt)
+@@ -102,7 +109,15 @@ assert dataset
+ dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
+                                          shuffle=True, num_workers=int(opt.workers))
+ 
+-device = torch.device("cuda:0" if opt.cuda else "cpu")
++if opt.ipex:
++    import intel_pytorch_extension as ipex
++    if opt.precision == "bfloat16":
++        # Automatically mix precision
++        ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++        print("Running with bfloat16...")
++    device = ipex.DEVICE
++else:
++    device = torch.device("cuda:0" if opt.cuda else "cpu")
+ ngpu = int(opt.ngpu)
+ nz = int(opt.nz)
+ ngf = int(opt.ngf)
+@@ -160,6 +175,33 @@ if opt.netG != '':
+     netG.load_state_dict(torch.load(opt.netG))
+ print(netG)
+ 
++def generate(netG, batchsize, device):
++    fixed_noise = torch.randn(batchsize, opt.nz, 1, 1, device=device)
++    dry_run = 5
++    netG.eval()
++    netG = netG.to(device=device)
++    if opt.jit:
++        netG = torch.jit.trace(netG, fixed_noise)
++        print(netG.graph_for(fixed_noise))
++
++    fixed_noise = fixed_noise.to(device=device)
++    with torch.no_grad():
++        for i in range(dry_run + opt.num_iterations):
++            if i == dry_run:
++                tic = time.time()
++            if opt.profiling and i > 0:
++                with torch.autograd.profiler.profile() as prof:
++                    fake = netG(fixed_noise)
++                    if i == dry_run:
++                        break
++            else:
++                fake = netG(fixed_noise)
++
++    if opt.profiling:
++        print(prof.key_averages().table(sort_by="self_cpu_time_total"))
++
++    toc = time.time() - tic
++    print("Throughput: %.2f image/sec, batchsize: %d, latency = %.2f sec"%((opt.num_iterations*batchsize)/toc, batchsize, toc/opt.num_iterations))         
+ 
+ class Discriminator(nn.Module):
+     def __init__(self, ngpu):
+@@ -211,6 +253,12 @@ fake_label = 0
+ optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+ optimizerG = optim.Adam(netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+ 
++if opt.inference:
++    print("----------------Generation benchmarking---------------")
++    generate(netG, opt.batchSize, device=torch.device(device))
++    import sys
++    sys.exit(0)
++
+ for epoch in range(opt.niter):
+     for i, data in enumerate(dataloader, 0):
+         ############################

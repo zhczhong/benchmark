@@ -1,0 +1,246 @@
+diff --git a/eval_lm.py b/eval_lm.py
+index f7add27..8448c5d 100644
+--- a/eval_lm.py
++++ b/eval_lm.py
+@@ -50,6 +50,13 @@ def main(parsed_args):
+ 
+     print(parsed_args)
+ 
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        device = ipex.DEVICE
++        if args.precision == 'bfloat16':
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++
+     use_cuda = torch.cuda.is_available() and not parsed_args.cpu
+ 
+     task = tasks.setup_task(parsed_args)
+@@ -92,6 +99,8 @@ def main(parsed_args):
+             model.half()
+         if use_cuda:
+             model.cuda()
++        if args.ipex:
++            model = model.to(device)
+ 
+     assert len(models) > 0
+ 
+@@ -141,6 +150,7 @@ def main(parsed_args):
+                 continue
+ 
+             sample = utils.move_to_cuda(sample) if use_cuda else sample
++            sample = utils.move_to_ipex(sample) if args.ipex else sample
+ 
+             gen_timer.start()
+             hypos = scorer.generate(models, sample)
+diff --git a/examples/speech_recognition/infer.py b/examples/speech_recognition/infer.py
+index ce5f4f7..85ec978 100644
+--- a/examples/speech_recognition/infer.py
++++ b/examples/speech_recognition/infer.py
+@@ -229,8 +229,9 @@ def main(args):
+             1.0 / gen_timer.avg,
+         )
+     )
+-    logger.info("| Generate {} with beam={}".format(args.gen_subset, args.beam))
+ 
++    logger.info("| Generate {} with beam={}".format(args.gen_subset, args.beam))
++    logger.info("| Throughput:{:.2f}".format(num_sentences / gen_timer.sum))
+ 
+ def cli_main():
+     parser = options.get_generation_parser()
+diff --git a/fairseq/options.py b/fairseq/options.py
+index 1bd54d5..1cd29c1 100644
+--- a/fairseq/options.py
++++ b/fairseq/options.py
+@@ -193,6 +193,14 @@ def get_parser(desc, default_task='translation'):
+                         help='threshold FP16 loss scale from below')
+     parser.add_argument('--user-dir', default=None,
+                         help='path to a python module containing custom extensions (tasks and/or architectures)')
++    parser.add_argument('--ipex', action='store_true', default=False,
++                        help='enable Intel_PyTorch_Extension')
++    parser.add_argument('--precision', type=str, default="float32",
++                    help='precision, float32, bfloat16')
++    parser.add_argument('--max_iters', default=0, type=int, metavar='N',
++                        help='max iterations to run')
++    parser.add_argument('--warmup_iters', default=10, type=int, metavar='N',
++                        help='iterations number to warmup')
+ 
+     from fairseq.registry import REGISTRIES
+     for registry_name, REGISTRY in REGISTRIES.items():
+diff --git a/fairseq/search.py b/fairseq/search.py
+index afcc388..82896b7 100644
+--- a/fairseq/search.py
++++ b/fairseq/search.py
+@@ -78,7 +78,7 @@ class BeamSearch(Search):
+             ),
+             out=(self.scores_buf, self.indices_buf),
+         )
+-        torch.div(self.indices_buf, vocab_size, out=self.beams_buf)
++        torch.floor_divide(self.indices_buf, vocab_size, out=self.beams_buf)
+         self.indices_buf.fmod_(vocab_size)
+         return self.scores_buf, self.indices_buf, self.beams_buf
+ 
+diff --git a/fairseq/utils.py b/fairseq/utils.py
+index 1af2394..c86a224 100644
+--- a/fairseq/utils.py
++++ b/fairseq/utils.py
+@@ -57,6 +57,12 @@ def move_to_cuda(sample):
+ 
+     return apply_to_sample(_move_to_cuda, sample)
+ 
++def move_to_ipex(sample):
++    import intel_pytorch_extension as ipex
++    def _move_to_ipex(tensor):
++        return tensor.to(device=ipex.DEVICE)
++
++    return apply_to_sample(_move_to_ipex, sample)
+ 
+ INCREMENTAL_STATE_INSTANCE_ID = defaultdict(lambda: 0)
+ 
+diff --git a/generate.py b/generate.py
+index c23cc79..facb18d 100644
+--- a/generate.py
++++ b/generate.py
+@@ -26,6 +26,13 @@ def main(args):
+         args.max_tokens = 12000
+     print(args)
+ 
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        device = ipex.DEVICE
++        if args.precision == 'bfloat16':
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++
+     use_cuda = torch.cuda.is_available() and not args.cpu
+ 
+     # Load dataset splits
+@@ -57,6 +64,9 @@ def main(args):
+             model.half()
+         if use_cuda:
+             model.cuda()
++        if args.ipex:
++            model = model.to(device)
++            # print(model)
+ 
+     # Load alignment dictionary for unknown word replacement
+     # (None if no unknown word replacement, empty if no path to align dictionary)
+@@ -91,8 +101,13 @@ def main(args):
+     has_target = True
+     with progress_bar.build_progress_bar(args, itr) as t:
+         wps_meter = TimeMeter()
+-        for sample in t:
+-            sample = utils.move_to_cuda(sample) if use_cuda else sample
++        for iters_runned, sample in enumerate(t):
++            if args.max_iters > 0 and iters_runned >= args.max_iters + args.warmup_iters:
++                break
++            if args.ipex:
++                sample = utils.move_to_ipex(sample)
++            else:
++                sample = utils.move_to_cuda(sample) if use_cuda else sample
+             if 'net_input' not in sample:
+                 continue
+ 
+@@ -100,10 +115,12 @@ def main(args):
+             if args.prefix_size > 0:
+                 prefix_tokens = sample['target'][:, :args.prefix_size]
+ 
+-            gen_timer.start()
++            if iters_runned >= args.warmup_iters:
++                gen_timer.start()
+             hypos = task.inference_step(generator, models, sample, prefix_tokens)
+             num_generated_tokens = sum(len(h[0]['tokens']) for h in hypos)
+-            gen_timer.stop(num_generated_tokens)
++            if iters_runned >= args.warmup_iters:
++                gen_timer.stop(num_generated_tokens)
+ 
+             for i, sample_id in enumerate(sample['id'].tolist()):
+                 has_target = sample['target'] is not None
+@@ -171,12 +188,14 @@ def main(args):
+ 
+             wps_meter.update(num_generated_tokens)
+             t.log({'wps': round(wps_meter.avg)})
+-            num_sentences += sample['nsentences']
++            if iters_runned >= args.warmup_iters:
++                num_sentences += sample['nsentences']
+ 
+     print('| Translated {} sentences ({} tokens) in {:.1f}s ({:.2f} sentences/s, {:.2f} tokens/s)'.format(
+         num_sentences, gen_timer.n, gen_timer.sum, num_sentences / gen_timer.sum, 1. / gen_timer.avg))
+     if has_target:
+         print('| Generate {} with beam={}: {}'.format(args.gen_subset, args.beam, scorer.result_string()))
++    print("inference Throughput: %.3f sentences/s", num_sentences / gen_timer.sum)
+     return scorer
+ 
+ 
+diff --git a/interactive.py b/interactive.py
+index d9d547a..17dd49d 100644
+--- a/interactive.py
++++ b/interactive.py
+@@ -69,6 +69,13 @@ def main(args):
+ 
+     print(args)
+ 
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        device = ipex.DEVICE
++        if args.precision == 'bfloat16':
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++
+     use_cuda = torch.cuda.is_available() and not args.cpu
+ 
+     # Setup task, e.g., translation
+@@ -96,6 +103,8 @@ def main(args):
+             model.half()
+         if use_cuda:
+             model.cuda()
++        if args.ipex:
++            model = model.to(device)
+ 
+     # Initialize generator
+     generator = task.build_generator(args)
+@@ -139,6 +148,9 @@ def main(args):
+             if use_cuda:
+                 src_tokens = src_tokens.cuda()
+                 src_lengths = src_lengths.cuda()
++            if args.ipex:
++                src_tokens = src_tokens.to(device)
++                src_lengths = src_lengths.to(device)
+ 
+             sample = {
+                 'net_input': {
+diff --git a/validate.py b/validate.py
+index f768e8c..9d6bac8 100644
+--- a/validate.py
++++ b/validate.py
+@@ -16,6 +16,13 @@ def main(args, override_args=None):
+     use_fp16 = args.fp16
+     use_cuda = torch.cuda.is_available() and not args.cpu
+ 
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        device = ipex.DEVICE
++        if args.precision == 'bfloat16':
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++
+     if override_args is not None:
+         overrides = vars(override_args)
+         overrides.update(eval(getattr(override_args, 'model_overrides', '{}')))
+@@ -36,6 +43,8 @@ def main(args, override_args=None):
+             model.half()
+         if use_cuda:
+             model.cuda()
++        if args.ipex:
++            model = model.to(device)
+ 
+     # Print args
+     print(model_args)
+@@ -75,6 +84,7 @@ def main(args, override_args=None):
+         log_outputs = []
+         for i, sample in enumerate(progress):
+             sample = utils.move_to_cuda(sample) if use_cuda else sample
++            sample = utils.move_to_ipex(sample) if args.ipex else sample
+             _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
+             progress.log(log_output, step=i)
+             log_outputs.append(log_output)

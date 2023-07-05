@@ -1,0 +1,169 @@
+diff --git a/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml b/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+index d50fb86..f7fc54f 100644
+--- a/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
++++ b/configs/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
+@@ -1,6 +1,6 @@
+ _BASE_: "../Base-RCNN-FPN.yaml"
+ MODEL:
+-  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
++  WEIGHTS: "./R-50.pkl"
+   MASK_ON: True
+   RESNETS:
+     DEPTH: 50
+diff --git a/detectron2/config/defaults.py b/detectron2/config/defaults.py
+index fe492a5..8f10fe4 100644
+--- a/detectron2/config/defaults.py
++++ b/detectron2/config/defaults.py
+@@ -17,6 +17,11 @@ from .config import CfgNode as CN
+ 
+ _C = CN()
+ 
++# BF16
++_C.BF16 = False
++# IPEX
++_C.IPEX = True
++
+ # The version number, to upgrade from old configs to new ones if any
+ # changes happen. It's recommended to keep a VERSION in your config file.
+ _C.VERSION = 2
+@@ -25,7 +30,7 @@ _C.MODEL = CN()
+ _C.MODEL.LOAD_PROPOSALS = False
+ _C.MODEL.MASK_ON = False
+ _C.MODEL.KEYPOINT_ON = False
+-_C.MODEL.DEVICE = "cuda"
++_C.MODEL.DEVICE = "dpcpp"
+ _C.MODEL.META_ARCHITECTURE = "GeneralizedRCNN"
+ 
+ # Path (possibly with schema like catalog:// or detectron2://) to a checkpoint file
+diff --git a/detectron2/engine/defaults.py b/detectron2/engine/defaults.py
+index 0ed1b28..08bfb54 100644
+--- a/detectron2/engine/defaults.py
++++ b/detectron2/engine/defaults.py
+@@ -41,6 +41,7 @@ from detectron2.utils.logger import setup_logger
+ 
+ from . import hooks
+ from .train_loop import SimpleTrainer
++import intel_pytorch_extension as ipex
+ 
+ __all__ = ["default_argument_parser", "default_setup", "DefaultPredictor", "DefaultTrainer"]
+ 
+@@ -395,6 +396,11 @@ class DefaultTrainer(SimpleTrainer):
+         Overwrite it if you'd like a different model.
+         """
+         model = build_model(cfg)
++        # Cannot re-assign modules in a ScriptModule with non-scripted module---FrozenBatchNorm2d 
++        if cfg.IPEX:
++            #model = model.to(ipex.DEVICE)
++            from .recursive_inf import recursive, mkldnn_forward_pre_hook, mkldnn_forward_hook
++            recursive(model, mkldnn_forward_pre_hook, mkldnn_forward_hook)
+         logger = logging.getLogger(__name__)
+         logger.info("Model:\n{}".format(model))
+         return model
+@@ -494,6 +500,7 @@ Alternatively, you can call evaluation functions yourself (see Colab balloon tut
+                     )
+                     results[dataset_name] = {}
+                     continue
++            model = model.to(ipex.DEVICE)
+             results_i = inference_on_dataset(model, data_loader, evaluator)
+             results[dataset_name] = results_i
+             if comm.is_main_process():
+diff --git a/detectron2/layers/wrappers.py b/detectron2/layers/wrappers.py
+index 7cd6442..e28daa6 100644
+--- a/detectron2/layers/wrappers.py
++++ b/detectron2/layers/wrappers.py
+@@ -11,7 +11,8 @@ is implemented
+ import math
+ import torch
+ from torch.nn.modules.utils import _ntuple
+-
++from detectron2.config import get_cfg
++import intel_pytorch_extension as ipex
+ TORCH_VERSION = tuple(int(x) for x in torch.__version__.split(".")[:2])
+ 
+ 
+@@ -58,6 +59,7 @@ class Conv2d(torch.nn.Conv2d):
+ 
+         self.norm = norm
+         self.activation = activation
++        self.cfg = get_cfg()
+ 
+     def forward(self, x):
+         if x.numel() == 0 and self.training:
+@@ -89,8 +91,11 @@ class Conv2d(torch.nn.Conv2d):
+                 return empty + _dummy
+             else:
+                 return empty
+-
+-        x = super().forward(x)
++        #x = super().forward(x)
++        if self.cfg.IPEX:
++            x = super().forward(x.to(ipex.DEVICE))
++        else:
++            x = super().forward(x)
+         if self.norm is not None:
+             x = self.norm(x)
+         if self.activation is not None:
+diff --git a/detectron2/modeling/proposal_generator/rpn.py b/detectron2/modeling/proposal_generator/rpn.py
+index bbb3dc5..335b4d8 100644
+--- a/detectron2/modeling/proposal_generator/rpn.py
++++ b/detectron2/modeling/proposal_generator/rpn.py
+@@ -12,6 +12,7 @@ from ..box_regression import Box2BoxTransform
+ from ..matcher import Matcher
+ from .build import PROPOSAL_GENERATOR_REGISTRY
+ from .rpn_outputs import RPNOutputs, find_top_rpn_proposals
++from detectron2.config import get_cfg
+ 
+ RPN_HEAD_REGISTRY = Registry("RPN_HEAD")
+ """
+@@ -42,6 +43,7 @@ class StandardRPNHead(nn.Module):
+ 
+     def __init__(self, cfg, input_shape: List[ShapeSpec]):
+         super().__init__()
++        self.cfg = get_cfg()
+ 
+         # Standard RPN is shared across levels:
+         in_channels = [s.channels for s in input_shape]
+@@ -79,7 +81,13 @@ class StandardRPNHead(nn.Module):
+         pred_objectness_logits = []
+         pred_anchor_deltas = []
+         for x in features:
+-            t = F.relu(self.conv(x))
++            if self.cfg.IPEX:
++               import intel_pytorch_extension as ipex
++               x = x.to(ipex.DEVICE)
++               t = F.relu(self.conv(x))
++               t= t.to(ipex.DEVICE)
++            else:
++               t = F.relu(self.conv(x))
+             pred_objectness_logits.append(self.objectness_logits(t))
+             pred_anchor_deltas.append(self.anchor_deltas(t))
+         return pred_objectness_logits, pred_anchor_deltas
+diff --git a/tools/train_net.py b/tools/train_net.py
+index 2176b88..b7b972e 100755
+--- a/tools/train_net.py
++++ b/tools/train_net.py
+@@ -117,7 +117,7 @@ def setup(args):
+     cfg = get_cfg()
+     cfg.merge_from_file(args.config_file)
+     cfg.merge_from_list(args.opts)
+-    cfg.freeze()
++    # cfg.freeze()
+     default_setup(cfg, args)
+     return cfg
+ 
+@@ -125,8 +125,15 @@ def setup(args):
+ def main(args):
+     cfg = setup(args)
+ 
++    if cfg.IPEX:
++        import intel_pytorch_extension as ipex
++
++    cfg.eval_only = False
+     if args.eval_only:
++        cfg.eval_only = True
+         model = Trainer.build_model(cfg)
++        if cfg.IPEX:
++            model.to(ipex.DEVICE)
+         DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
+             cfg.MODEL.WEIGHTS, resume=args.resume
+         )

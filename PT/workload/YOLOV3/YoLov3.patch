@@ -1,0 +1,81 @@
+diff --git a/detect.py b/detect.py
+index d3ce57b..46e713b 100644
+--- a/detect.py
++++ b/detect.py
+@@ -35,6 +35,8 @@ if __name__ == "__main__":
+     parser.add_argument("--batch_size", type=int, default=1, help="size of the batches")
+     parser.add_argument("--n_cpu", type=int, default=0, help="number of cpu threads to use during batch generation")
+     parser.add_argument("--img_size", type=int, default=416, help="size of each image dimension")
++    parser.add_argument("--num_iter", type=int, default=400, help="Total iteration of inference.")
++    parser.add_argument("--num_warmup", type=int, default=10, help="Total iteration of warmup.")
+     parser.add_argument("--checkpoint_model", type=str, help="path to checkpoint model")
+     opt = parser.parse_args()
+     print(opt)
+@@ -75,22 +77,28 @@ if __name__ == "__main__":
+     for batch_i, (img_paths, input_imgs) in enumerate(dataloader):
+         # Configure input
+         input_imgs = Variable(input_imgs.type(Tensor))
+-
+-        # Get detections
+-        with torch.no_grad():
+-            detections = model(input_imgs)
+-            detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)
+-
+-        # Log progress
+-        current_time = time.time()
+-        inference_time = datetime.timedelta(seconds=current_time - prev_time)
+-        prev_time = current_time
+-        print("\t+ Batch %d, Inference Time: %s" % (batch_i, inference_time))
+-
+-        # Save image and detections
+-        imgs.extend(img_paths)
+-        img_detections.extend(detections)
+-
++        for i in range(opt.num_warmup):
++            with torch.no_grad():
++                detections = model(input_imgs)
++                detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)
++        tic = time.time()
++        total_time=0
++        for i in range(opt.num_iter):
++            # Get detections
++            with torch.no_grad():
++                detections = model(input_imgs)
++                detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)
++
++            # Log progress
++            current_time = time.time()
++            inference_time = datetime.timedelta(seconds=current_time - prev_time)
++            prev_time = current_time
++            print("\t+ iteration %d, Inference Time: %s" % (i, inference_time))
++
++            total_time += time.time() - tic
++        print("Throughput: %.2f" % (opt.num_iter / total_time))
++        break
++    '''
+     # Bounding-box colors
+     cmap = plt.get_cmap("tab20b")
+     colors = [cmap(i) for i in np.linspace(0, 1, 20)]
+@@ -144,3 +152,4 @@ if __name__ == "__main__":
+         output_path = os.path.join("output", f"{filename}.png")
+         plt.savefig(output_path, bbox_inches="tight", pad_inches=0.0)
+         plt.close()
++        '''
+diff --git a/requirements.txt b/requirements.txt
+index b5802e3..7ced228 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,9 +1,9 @@
+ numpy
+-torch>=1.2
+-torchvision
++#torch>=1.2
++#torchvision
+ matplotlib
+ tensorboard
+ terminaltables
+ pillow
+ tqdm
+-imgaug
+\ No newline at end of file
++imgaug

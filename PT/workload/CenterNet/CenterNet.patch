@@ -1,0 +1,534 @@
+diff --git a/config/CenterNet-104.json b/config/CenterNet-104.json
+index 8e7c8d2..4b05d69 100644
+--- a/config/CenterNet-104.json
++++ b/config/CenterNet-104.json
+@@ -21,7 +21,7 @@
+ 
+         "chunk_sizes": [6,6,6,6,6,6,6,6],
+ 
+-        "data_dir": "../data"
++        "data_dir": "data"
+     },
+     
+     "db": {
+diff --git a/config/CenterNet-52.json b/config/CenterNet-52.json
+index 8e7c8d2..4b05d69 100644
+--- a/config/CenterNet-52.json
++++ b/config/CenterNet-52.json
+@@ -21,7 +21,7 @@
+ 
+         "chunk_sizes": [6,6,6,6,6,6,6,6],
+ 
+-        "data_dir": "../data"
++        "data_dir": "data"
+     },
+     
+     "db": {
+diff --git a/data/coco/PythonAPI/pycocotools/cocoeval.py b/data/coco/PythonAPI/pycocotools/cocoeval.py
+index 3cf7e36..2ec4fec 100644
+--- a/data/coco/PythonAPI/pycocotools/cocoeval.py
++++ b/data/coco/PythonAPI/pycocotools/cocoeval.py
+@@ -781,9 +781,9 @@ class Params:
+         self.imgIds = []
+         self.catIds = []
+         # np.arange causes trouble.  the data point on arange is slightly larger than the true value
+-        self.iouThrs = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05) + 1, endpoint=True)
+-        self.iouThrs_fd = np.linspace(.05, 0.5, np.round((0.5 - .05) / .05) + 1, endpoint=True)
+-        self.recThrs = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01) + 1, endpoint=True)
++        self.iouThrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
++        self.iouThrs_fd = np.linspace(.05, 0.5, int(np.round((0.5 - .05) / .05)) + 1, endpoint=True)
++        self.recThrs = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
+         self.maxDets = [1, 10, 100]
+         self.areaRng = [[0 ** 2, 1e5 ** 2], [0 ** 2, 32 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
+         self.areaRngLbl = ['all', 'small', 'medium', 'large']
+@@ -793,8 +793,8 @@ class Params:
+         self.imgIds = []
+         self.catIds = []
+         # np.arange causes trouble.  the data point on arange is slightly larger than the true value
+-        self.iouThrs = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05) + 1, endpoint=True)
+-        self.recThrs = np.linspace(.0, 1.00, np.round((1.00 - .0) / .01) + 1, endpoint=True)
++        self.iouThrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
++        self.recThrs = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
+         self.maxDets = [20]
+         self.areaRng = [[0 ** 2, 1e5 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
+         self.areaRngLbl = ['all', 'medium', 'large']
+diff --git a/db/coco.py b/db/coco.py
+index 4298a8e..cb59077 100644
+--- a/db/coco.py
++++ b/db/coco.py
+@@ -22,7 +22,7 @@ class MSCOCO(DETECTION):
+         self._split = split
+         self._dataset = {
+             "trainval": "trainval2014",
+-            "minival": "minival2014",
++            "minival": "val2014",
+             "testdev": "testdev2017"
+         }[self._split]
+         
+diff --git a/models/py_utils/_cpools/src/bottom_pool.cpp b/models/py_utils/_cpools/src/bottom_pool.cpp
+index bd6c65a..7c7f3d1 100644
+--- a/models/py_utils/_cpools/src/bottom_pool.cpp
++++ b/models/py_utils/_cpools/src/bottom_pool.cpp
+@@ -41,8 +41,8 @@ std::vector<at::Tensor> pool_backward(
+     int32_t height  = input.size(2);
+     int32_t width   = input.size(3);
+ 
+-    auto max_val = at::zeros(torch::CUDA(at::kFloat), {batch, channel, width});
+-    auto max_ind = at::zeros(torch::CUDA(at::kLong),  {batch, channel, width});
++    auto max_val = at::zeros({batch, channel, width}, torch::CUDA(at::kFloat));
++    auto max_ind = at::zeros({batch, channel, width}, torch::CUDA(at::kLong));
+ 
+     auto input_temp = input.select(2, 0);
+     max_val.copy_(input_temp);
+@@ -54,8 +54,8 @@ std::vector<at::Tensor> pool_backward(
+     output_temp.copy_(grad_output_temp);
+ 
+     auto un_max_ind = max_ind.unsqueeze(2);
+-    auto gt_mask    = at::zeros(torch::CUDA(at::kByte),  {batch, channel, width});
+-    auto max_temp   = at::zeros(torch::CUDA(at::kFloat), {batch, channel, width});
++    auto gt_mask    = at::zeros({batch, channel, width}, torch::CUDA(at::kByte));
++    auto max_temp   = at::zeros({batch, channel, width}, torch::CUDA(at::kFloat));
+     for (int32_t ind = 0; ind < height - 1; ++ind) {
+         input_temp = input.select(2, ind + 1);
+         at::gt_out(gt_mask, input_temp, max_val);
+diff --git a/models/py_utils/_cpools/src/left_pool.cpp b/models/py_utils/_cpools/src/left_pool.cpp
+index fbc5d98..a43fc01 100644
+--- a/models/py_utils/_cpools/src/left_pool.cpp
++++ b/models/py_utils/_cpools/src/left_pool.cpp
+@@ -41,8 +41,8 @@ std::vector<at::Tensor> pool_backward(
+     int32_t height  = input.size(2);
+     int32_t width   = input.size(3);
+ 
+-    auto max_val = at::zeros(torch::CUDA(at::kFloat), {batch, channel, height});
+-    auto max_ind = at::zeros(torch::CUDA(at::kLong),  {batch, channel, height});
++    auto max_val = at::zeros({batch, channel, height}, torch::CUDA(at::kFloat));
++    auto max_ind = at::zeros({batch, channel, height}, torch::CUDA(at::kLong));
+ 
+     auto input_temp = input.select(3, width - 1);
+     max_val.copy_(input_temp);
+@@ -54,8 +54,8 @@ std::vector<at::Tensor> pool_backward(
+     output_temp.copy_(grad_output_temp);
+ 
+     auto un_max_ind = max_ind.unsqueeze(3);
+-    auto gt_mask    = at::zeros(torch::CUDA(at::kByte),  {batch, channel, height});
+-    auto max_temp   = at::zeros(torch::CUDA(at::kFloat), {batch, channel, height});
++    auto gt_mask    = at::zeros({batch, channel, height}, torch::CUDA(at::kByte));
++    auto max_temp   = at::zeros({batch, channel, height}, torch::CUDA(at::kFloat));
+     for (int32_t ind = 1; ind < width; ++ind) {
+         input_temp = input.select(3, width - ind - 1);
+         at::gt_out(gt_mask, input_temp, max_val);
+diff --git a/models/py_utils/_cpools/src/right_pool.cpp b/models/py_utils/_cpools/src/right_pool.cpp
+index 36c5c85..beca848 100644
+--- a/models/py_utils/_cpools/src/right_pool.cpp
++++ b/models/py_utils/_cpools/src/right_pool.cpp
+@@ -41,8 +41,8 @@ std::vector<at::Tensor> pool_backward(
+     int32_t height  = input.size(2);
+     int32_t width   = input.size(3);
+ 
+-    auto max_val = at::zeros(torch::CUDA(at::kFloat), {batch, channel, height});
+-    auto max_ind = at::zeros(torch::CUDA(at::kLong),  {batch, channel, height});
++    auto max_val = at::zeros({batch, channel, height}, torch::CUDA(at::kFloat));
++    auto max_ind = at::zeros({batch, channel, height}, torch::CUDA(at::kLong));
+ 
+     auto input_temp = input.select(3, 0);
+     max_val.copy_(input_temp);
+@@ -54,8 +54,8 @@ std::vector<at::Tensor> pool_backward(
+     output_temp.copy_(grad_output_temp);
+ 
+     auto un_max_ind = max_ind.unsqueeze(3);
+-    auto gt_mask    = at::zeros(torch::CUDA(at::kByte),  {batch, channel, height});
+-    auto max_temp   = at::zeros(torch::CUDA(at::kFloat), {batch, channel, height});
++    auto gt_mask    = at::zeros({batch, channel, height}, torch::CUDA(at::kByte));
++    auto max_temp   = at::zeros({batch, channel, height}, torch::CUDA(at::kFloat));
+     for (int32_t ind = 0; ind < width - 1; ++ind) {
+         input_temp = input.select(3, ind + 1);
+         at::gt_out(gt_mask, input_temp, max_val);
+diff --git a/models/py_utils/_cpools/src/top_pool.cpp b/models/py_utils/_cpools/src/top_pool.cpp
+index 4ac287f..9bae358 100644
+--- a/models/py_utils/_cpools/src/top_pool.cpp
++++ b/models/py_utils/_cpools/src/top_pool.cpp
+@@ -41,8 +41,8 @@ std::vector<at::Tensor> top_pool_backward(
+     int32_t height  = input.size(2);
+     int32_t width   = input.size(3);
+ 
+-    auto max_val = at::zeros(torch::CUDA(at::kFloat), {batch, channel, width});
+-    auto max_ind = at::zeros(torch::CUDA(at::kLong),  {batch, channel, width});
++    auto max_val = at::zeros({batch, channel, width}, torch::CUDA(at::kFloat));
++    auto max_ind = at::zeros({batch, channel, width}, torch::CUDA(at::kLong));
+ 
+     auto input_temp = input.select(2, height - 1);
+     max_val.copy_(input_temp);
+@@ -54,8 +54,8 @@ std::vector<at::Tensor> top_pool_backward(
+     output_temp.copy_(grad_output_temp);
+ 
+     auto un_max_ind = max_ind.unsqueeze(2);
+-    auto gt_mask    = at::zeros(torch::CUDA(at::kByte),  {batch, channel, width});
+-    auto max_temp   = at::zeros(torch::CUDA(at::kFloat), {batch, channel, width});
++    auto gt_mask    = at::zeros({batch, channel, width}, torch::CUDA(at::kByte));
++    auto max_temp   = at::zeros({batch, channel, width}, torch::CUDA(at::kFloat));
+     for (int32_t ind = 1; ind < height; ++ind) {
+         input_temp = input.select(2, height - ind - 1);
+         at::gt_out(gt_mask, input_temp, max_val);
+diff --git a/nnet/py_factory.py b/nnet/py_factory.py
+index 1b32663..758577c 100644
+--- a/nnet/py_factory.py
++++ b/nnet/py_factory.py
+@@ -7,6 +7,11 @@ import torch.nn as nn
+ from config import system_configs
+ from models.py_utils.data_parallel import DataParallel
+ 
++try:
++    import intel_pytorch_extension as ipex
++except:
++    print("No module: intel_pytorch_extension")
++
+ torch.manual_seed(317)
+ 
+ class Network(nn.Module):
+@@ -32,7 +37,7 @@ class DummyModule(nn.Module):
+         return self.module(*xs, **kwargs)
+ 
+ class NetworkFactory(object):
+-    def __init__(self, db):
++    def __init__(self, db, args=None):
+         super(NetworkFactory, self).__init__()
+ 
+         module_file = "models.{}".format(system_configs.snapshot_name)
+@@ -42,7 +47,14 @@ class NetworkFactory(object):
+         self.model   = DummyModule(nnet_module.model(db))
+         self.loss    = nnet_module.loss
+         self.network = Network(self.model, self.loss)
+-        self.network = DataParallel(self.network, chunk_sizes=system_configs.chunk_sizes).cuda()
++        # self.network = DataParallel(self.network, chunk_sizes=system_configs.chunk_sizes).cuda()
++        self.network = DataParallel(self.network, chunk_sizes=system_configs.chunk_sizes)
++        if args.ipex:
++            self.device = ipex.DEVICE
++        elif args.cuda:
++            self.device = torch.device('cuda')
++        else:
++            self.device = torch.device('cpu')
+ 
+         total_params = 0
+         for params in self.model.parameters():
+@@ -68,6 +80,9 @@ class NetworkFactory(object):
+     def cuda(self):
+         self.model.cuda()
+ 
++    def ipex(self):
++        self.network.to(ipex.DEVICE)
++
+     def train_mode(self):
+         self.network.train()
+ 
+@@ -96,8 +111,8 @@ class NetworkFactory(object):
+ 
+     def validate(self, xs, ys, **kwargs):
+         with torch.no_grad():
+-            xs = [x.cuda(non_blocking=True) for x in xs]
+-            ys = [y.cuda(non_blocking=True) for y in ys]
++            xs = [x.to(self.device) for x in xs]
++            ys = [y.to(self.device) for y in ys]
+ 
+             loss_kp = self.network(xs, ys)
+             loss       = loss_kp[0]
+@@ -110,7 +125,7 @@ class NetworkFactory(object):
+ 
+     def test(self, xs, **kwargs):
+         with torch.no_grad():
+-            xs = [x.cuda(non_blocking=True) for x in xs]
++            xs = [x.to(self.device) for x in xs]
+             return self.model(*xs, **kwargs)
+ 
+     def set_lr(self, lr):
+@@ -128,7 +143,7 @@ class NetworkFactory(object):
+         cache_file = system_configs.snapshot_file.format(iteration)
+         print("loading model from {}".format(cache_file))
+         with open(cache_file, "rb") as f:
+-            params = torch.load(f)
++            params = torch.load(f, map_location=torch.device('cpu'))
+             self.model.load_state_dict(params)
+ 
+     def save_params(self, iteration):
+diff --git a/test.py b/test.py
+index d1fdbf3..90cccf4 100644
+--- a/test.py
++++ b/test.py
+@@ -6,6 +6,9 @@ import pprint
+ import argparse
+ import importlib
+ import numpy as np
++import queue
++import threading
++import time
+ 
+ import matplotlib
+ matplotlib.use("Agg")
+@@ -13,6 +16,7 @@ matplotlib.use("Agg")
+ from config import system_configs
+ from nnet.py_factory import NetworkFactory
+ from db.datasets import datasets
++from torch.multiprocessing import Process, Queue
+ 
+ torch.backends.cudnn.benchmark = False
+ 
+@@ -27,6 +31,22 @@ def parse_args():
+                         default="validation", type=str)
+     parser.add_argument("--suffix", dest="suffix", default=None, type=str)
+     parser.add_argument("--debug", action="store_true")
++    parser.add_argument("--evaluate", action="store_true", default=False,
++                        help='evaluate performance only')
++    parser.add_argument("--cuda", action="store_true", default=False,
++                        help='Use CUDA')
++    parser.add_argument('--ipex', action='store_true', default=False,
++                        help='use ipex')
++    # parser.add_argument('--jit', action='store_true', default=False,
++    #                     help='use ipex')
++    parser.add_argument('--precision', default="float32",
++                            help='precision, "float32" or "bfloat16"')
++    parser.add_argument('--warmup', type=int, default=10,
++                        help='number of warmup')
++    parser.add_argument('--max_iters', type=int, default=100,
++                        help='max number of iterations to run')
++    parser.add_argument('--batch_size', type=int, default=48,
++                        help='batch size')
+ 
+     args = parser.parse_args()
+     return args
+@@ -36,7 +56,7 @@ def make_dirs(directories):
+         if not os.path.exists(directory):
+             os.makedirs(directory)
+ 
+-def test(db, split, testiter, debug=False, suffix=None): 
++def test(db, split, testiter, debug=False, suffix=None, args=None): 
+     result_dir = system_configs.result_dir
+     result_dir = os.path.join(result_dir, str(testiter), split)
+ 
+@@ -49,19 +69,137 @@ def test(db, split, testiter, debug=False, suffix=None):
+     print("loading parameters at iteration: {}".format(test_iter))
+ 
+     print("building neural network...")
+-    nnet = NetworkFactory(db)
++    nnet = NetworkFactory(db, args)
+     print("loading parameters...")
+     nnet.load_params(test_iter)
+ 
+     test_file = "test.{}".format(db.data)
+     testing = importlib.import_module(test_file).testing
+ 
+-    nnet.cuda()
+     nnet.eval_mode()
+-    testing(db, nnet, result_dir, debug=debug)
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        print("Running with IPEX...")
++        if args.precision == "bfloat16":
++            # Automatically mix precision
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++        nnet.ipex()
++        # if args.jit:
++        #     nnet.network = torch.jit.script(nnet.network)
++    elif args.cuda:
++        nnet.cuda()
++    testing(db, nnet, result_dir, debug=debug, args=args)
++
++
++def prefetch_data(db, queue, sample_data, data_aug):
++    ind = 0
++    print("start prefetching data...")
++    np.random.seed(os.getpid())
++    while True:
++        try:
++            data, ind = sample_data(db, ind, data_aug=data_aug)
++            queue.put(data)
++        except Exception as e:
++            traceback.print_exc()
++            raise e
++
++
++def pin_memory(data_queue, pinned_data_queue, sema, use_cuda):
++    while True:
++        data = data_queue.get()
++
++        if use_cuda:
++            data["xs"] = [x.pin_memory() for x in data["xs"]]
++            data["ys"] = [y.pin_memory() for y in data["ys"]]
++
++        pinned_data_queue.put(data)
++
++        if sema.acquire(blocking=False):
++            return
++
++
++def init_parallel_jobs(dbs, queue, fn, data_aug):
++    tasks = [Process(target=prefetch_data, args=(db, queue, fn, data_aug)) for db in dbs]
++    for task in tasks:
++        task.daemon = True
++        task.start()
++    return tasks
++
++
++def evaluate(validation_db, args):
++    # getting the size of each database
++    validation_size = len(validation_db.db_inds)
++
++    # queues storing data for training
++    validation_queue = Queue(5)
++
++    # queues storing pinned data for training
++    pinned_validation_queue = queue.Queue(5)
++
++    # load data sampling function
++    data_file   = "sample.{}".format(validation_db.data)
++    sample_data = importlib.import_module(data_file).sample_data
++
++    # allocating resources for parallel reading
++    validation_tasks = init_parallel_jobs([validation_db], validation_queue, sample_data, False)
++
++    validation_pin_semaphore = threading.Semaphore()
++    validation_pin_semaphore.acquire()
++
++    validation_pin_args   = (validation_queue, pinned_validation_queue, validation_pin_semaphore, args.cuda)
++    validation_pin_thread = threading.Thread(target=pin_memory, args=validation_pin_args)
++    validation_pin_thread.daemon = True
++    validation_pin_thread.start()
++
++    print("building model...")
++    nnet = NetworkFactory(validation_db, args)
++
++    test_iter = system_configs.max_iter if args.testiter is None else args.testiter
++    nnet.load_params(test_iter)
++
++    print("evaluate start...")
++    nnet.eval_mode()
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        print("Running with IPEX...")
++        if args.precision == "bfloat16":
++            # Automatically mix precision
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Running with bfloat16...')
++        nnet.ipex()
++    elif args.cuda:
++        nnet.cuda()
++
++    num_images = args.max_iters + args.warmup
++    total_time = 0
++    for i in range(num_images):
++        validation = pinned_validation_queue.get(block=True)
++        if i >= args.warmup:
++            start = time.time()
++        validation_loss = nnet.validate(**validation)
++        if i >= args.warmup:
++            total_time += time.time() - start
++
++        if i % 10 == 0:
++            print("iterations: {}/{}".format(i, num_images))
++
++    # sending signal to kill the thread
++    validation_pin_semaphore.release()
++
++    # terminating data fetching processes
++    for validation_task in validation_tasks:
++        validation_task.terminate()
++
++    latency = total_time / args.max_iters / args.batch_size * 1000
++    perf = args.max_iters * args.batch_size / total_time
++    print('inference latency: %0.3f ms' % latency)
++    print('inference Throughput: %0.3f fps' % perf)
++
+ 
+ if __name__ == "__main__":
+     args = parse_args()
++    print(args)
+ 
+     if args.suffix is None:
+         cfg_file = os.path.join(system_configs.config_dir, args.cfg_file + ".json")
+@@ -73,6 +211,7 @@ if __name__ == "__main__":
+         configs = json.load(f)
+             
+     configs["system"]["snapshot_name"] = args.cfg_file
++    configs["system"]["batch_size"] = args.batch_size
+     system_configs.update_config(configs["system"])
+ 
+     train_split = system_configs.train_split
+@@ -96,4 +235,7 @@ if __name__ == "__main__":
+     print("db config...")
+     pprint.pprint(testing_db.configs)
+ 
+-    test(testing_db, args.split, args.testiter, args.debug, args.suffix)
++    if args.evaluate:
++        evaluate(testing_db, args)
++    else:
++        test(testing_db, args.split, args.testiter, args.debug, args.suffix, args)
+diff --git a/test/coco.py b/test/coco.py
+index 7d7004a..c5e33bc 100644
+--- a/test/coco.py
++++ b/test/coco.py
+@@ -5,6 +5,7 @@ import json
+ import copy
+ import numpy as np
+ import torch
++import time
+ 
+ from PIL import Image, ImageDraw, ImageFont
+ import matplotlib.pyplot as plt
+@@ -56,7 +57,7 @@ def kp_decode(nnet, images, K, ae_threshold=0.5, kernel=3):
+     center = center.data.cpu().numpy()
+     return detections, center
+ 
+-def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
++def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode, args=None):
+     debug_dir = os.path.join(result_dir, "debug")
+     if not os.path.exists(debug_dir):
+         os.makedirs(debug_dir)
+@@ -65,7 +66,7 @@ def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
+         db_inds = db.db_inds[:100] if debug else db.db_inds
+     else:
+         db_inds = db.db_inds[:100] if debug else db.db_inds[:5000]
+-    num_images = db_inds.size
++    num_images = db_inds.size if args.max_iters <=0 else args.max_iters + args.warmup
+ 
+     K             = db.configs["top_k"]
+     ae_threshold  = db.configs["ae_threshold"]
+@@ -84,6 +85,7 @@ def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
+     }[db.configs["nms_algorithm"]]
+ 
+     top_bboxes = {}
++    total_time = 0
+     for ind in tqdm(range(0, num_images), ncols=80, desc="locating kps"):
+         db_ind = db_inds[ind]
+ 
+@@ -91,6 +93,8 @@ def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
+         image_file = db.image_file(db_ind)
+         image      = cv2.imread(image_file)
+ 
++        if ind >= args.warmup:
++            start = time.time()
+         height, width = image.shape[0:2]
+ 
+         detections = []
+@@ -307,6 +311,15 @@ def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
+             plt.close()
+             #cv2.imwrite(debug_file, image, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+ 
++        if ind >= args.warmup:
++            total_time += time.time() - start
++        if ind >= args.max_iters + args.warmup - 1:
++            break
++
++    latency = total_time / (ind + 1 - args.warmup) * 1000
++    perf = (ind + 1 - args.warmup) / total_time
++    print('inference latency: %0.3f ms' % latency)
++    print('inference Throughput: %0.3f fps' % perf)
+     result_json = os.path.join(result_dir, "results.json")
+     detections  = db.convert_to_coco(top_bboxes)
+     with open(result_json, "w") as f:
+@@ -317,5 +330,5 @@ def kp_detection(db, nnet, result_dir, debug=False, decode_func=kp_decode):
+     db.evaluate(result_json, cls_ids, image_ids)
+     return 0
+ 
+-def testing(db, nnet, result_dir, debug=False):
+-    return globals()[system_configs.sampling_function](db, nnet, result_dir, debug=debug)
++def testing(db, nnet, result_dir, debug=False, args=None):
++    return globals()[system_configs.sampling_function](db, nnet, result_dir, debug=debug, args=args)

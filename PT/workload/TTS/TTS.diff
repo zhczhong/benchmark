@@ -1,0 +1,387 @@
+diff --git a/benchmark.py b/benchmark.py
+new file mode 100644
+index 0000000..033203b
+--- /dev/null
++++ b/benchmark.py
+@@ -0,0 +1,165 @@
++# Based on Jupyter notebook from:
++# https://github.com/mozilla/TTS/blob/20a6ab3d612eea849a49801d365fcd071839b7a1/notebooks/Benchmark.ipynb
++
++import os
++import sys
++import io
++import torch
++import time
++import json
++import numpy as np
++from collections import OrderedDict
++from matplotlib import pylab as plt
++
++import librosa
++import librosa.display
++
++from TTS.models.tacotron import Tacotron
++from TTS.layers import *
++from TTS.utils.data import *
++from TTS.utils.audio import AudioProcessor
++from TTS.utils.generic_utils import load_config, setup_model
++from TTS.utils.text import text_to_sequence
++from TTS.utils.synthesis import synthesis, text_to_seqvec, id_to_torch
++from TTS.utils.visual import visualize
++from TTS.utils.text.symbols import symbols, phonemes
++
++import argparse
++import csv
++
++def main():
++    args = parse_args()
++    if args.ipex:
++        import intel_pytorch_extension as ipex
++        if args.precision == "bfloat16":
++            # Automatically mix precision
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print('Run model with bfloat16...')
++    # Set constants
++    model_path = args.model_path
++    config_path = args.config_path
++    config = load_config(config_path)
++    dataset_name = args.dataset_name
++    metadata_path = args.metadata_path
++    test_sentences = load_test_sentences(dataset_name, metadata_path)
++    use_cuda = False
++    # Set some config fields manually for testing
++    config.use_forward_attn = True
++    # Use only one speaker
++    speaker_id = None
++    speakers = []
++    # load the audio processor
++    ap = AudioProcessor(**config.audio)
++    # Load TTS model
++    model = load_model(config, speakers, model_path)
++    if args.ipex:
++        model.to(ipex.DEVICE)
++        # if args.jit:
++        #     for i, sentence in enumerate(test_sentences):
++        #         inputs = text_to_seqvec(sentence, config, use_cuda)
++        #         speaker_id_ = id_to_torch(speaker_id)
++        #         model = torch.jit.trace(model.inference, (inputs, speaker_id_))
++        #         break
++    # Run inference
++    avg_throughput, avg_latency = run_inference(test_sentences, model, config, use_cuda, ap, speaker_id, device=ipex.DEVICE if args.ipex else "cpu")
++    print(f"Total Average Throughput: {avg_throughput} [element/s]")
++    print(f"Total Average Latency: {avg_latency} [ms/element]")
++
++def parse_args(args=None, namespace=None):
++    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
++    parser.add_argument("--model-path", help="Tacotron model filename", action="store", required=True)
++    parser.add_argument("--config-path", help="Tacotron config filename", action="store", required=True)
++    parser.add_argument("--dataset-name", help="Dataset name", action="store", default="dummy", required=False)
++    parser.add_argument("--metadata-path", help="Dataset metadata filename (file containing sentences)",
++                        default="./dummy_data.csv", action="store", required=False)
++    parser.add_argument('--ipex', action='store_true', default=False,
++                        help='use intel pytorch extension')
++    parser.add_argument('--precision', default="float32",
++                        help='precision, "float32" or "bfloat16"')
++    # parser.add_argument('--jit', action='store_true', default=False,
++    #                     help='convert model to script model')
++    args = parser.parse_args()
++    return args
++
++def load_test_sentences(dataset_name, metadata_path):
++    dataset_load_function = {
++        "dummy": get_dummy_data,
++        "ljspeech": get_ljspeech_data
++    }
++    with open(metadata_path) as filestream:
++        raw_data = filestream.readlines()
++    return dataset_load_function.get(dataset_name, lambda x: [])(raw_data)
++
++def get_dummy_data(raw_data):
++    reader = csv.reader(raw_data)
++    data = [element for row in reader for element in row if element]
++    return data
++
++def get_ljspeech_data(raw_data):
++    reader = csv.reader(raw_data, delimiter="|", quoting=csv.QUOTE_NONE)
++    data = [row[2] for row in reader]
++    return data
++
++def load_model(config, speakers, model_path):
++    # Only one speaker
++    speakers = []
++    # load the model
++    num_chars = len(phonemes) if config.use_phonemes else len(symbols)
++    model = setup_model(num_chars, len(speakers), config)
++    # load model state
++    cp = torch.load(model_path, map_location=lambda storage, loc: storage)
++    # load the model
++    model.load_state_dict(cp['model'])
++    model.eval()
++    # set model stepsize
++    if 'r' in cp:
++        model.decoder.set_r(cp['r'])
++    model.decoder.max_decoder_steps = 2000
++    return model
++
++def run_inference(test_sentences, model, config, use_cuda, ap, speaker_id, device="cpu"):
++    num_sentences = len(test_sentences)
++    throughputs = []
++    latencies = []
++    avg_throughput = 0
++    avg_latency = 0
++    for i, sentence in enumerate(test_sentences):
++        write_progress_bar(i, num_sentences, avg_throughput, avg_latency)
++        throughput_s, latency_ms = tts(model, sentence, config, use_cuda, ap, speaker_id, figures=True, device=device)
++        throughputs.append(throughput_s)
++        latencies.append(latency_ms)
++        avg_throughput = sum(throughputs)/len(throughputs)
++        avg_latency = sum(latencies)/len(latencies)
++    close_progress_bar()
++    return avg_throughput, avg_latency
++
++def write_progress_bar(i, iterations, avg_throughput, avg_latency, toolbar_width=50):
++    num_bars = round(toolbar_width*i/iterations)
++    line = ["[", u"\u2588"*num_bars, " "*(toolbar_width-num_bars), "]",
++            " ", str(i), "/", str(iterations),
++            " ", "|", " ", "avg thrpt: ", f"{avg_throughput:.2f}", " [elem/s]",
++            " ", "|", " ", "avg lat: ", f"{avg_latency:.2f}", " [ms/elem]"]
++    line_str = "".join(line)
++    line_width = len(line_str)
++    sys.stdout.write(line_str)
++    sys.stdout.flush()
++    sys.stdout.write("\b" * line_width)
++    sys.stdout.flush()
++
++def close_progress_bar():
++    sys.stdout.write("\n")
++    sys.stdout.flush()
++
++def tts(model, text, CONFIG, use_cuda, ap, speaker_id, figures=True, device="cpu"):
++    t_1 = time.time()
++    waveform, alignment, mel_spec, mel_postnet_spec, stop_tokens, inputs_size = synthesis(model, text, CONFIG, use_cuda, ap, speaker_id, False, CONFIG.enable_eos_bos_chars, device=device)
++    mel_postnet_spec = ap._denormalize(mel_postnet_spec)
++    mel_postnet_spec = ap._normalize(mel_postnet_spec)
++    run_time = time.time() - t_1
++    latency_s = run_time / inputs_size[1]
++    latency_ms = latency_s * 1000
++    throughput_s = 1 / latency_s
++    return throughput_s, latency_ms
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/dataset_trunc.py b/dataset_trunc.py
+new file mode 100644
+index 0000000..a834a13
+--- /dev/null
++++ b/dataset_trunc.py
+@@ -0,0 +1,133 @@
++import argparse
++import csv
++import sys
++import statistics
++import random
++
++def main():
++    args = parse_args()
++    truncated_num = args.n
++    original_list = load_test_sentences(args.dataset_name, args.metadata_path)
++    retries = args.retries
++    output_path = args.output
++    if len(original_list) < truncated_num:
++        print(f"[INFO] Original list already shorter than {truncated_num} sentences. Exiting.")
++        return
++    truncated_list = generate_truncated_list(retries, original_list, truncated_num,
++                                             args.dataset_name, args.tolerate,
++                                             args.mean_limit, args.median_limit, args.stdev_limit)
++    if truncated_list:
++        save_test_sentences(output_path, truncated_list, args.dataset_name)
++
++def parse_args(args=None, namespace=None):
++    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
++    parser.add_argument("-n", help="Number of elements in truncated data", action="store", type=int, required=True)
++    parser.add_argument("--dataset-name", help="Dataset name", action="store", default="dummy", required=False)
++    parser.add_argument("--metadata-path", help="Dataset metadata filename (file containing sentences)",
++                        default="./dummy_data.csv", action="store", required=False)
++    parser.add_argument("--mean-limit", help="Acceptable mean difference percentage", action="store", default=1, type=int, required=False)
++    parser.add_argument("--median-limit", help="Acceptable median difference percentage", action="store", default=1, type=int, required=False)
++    parser.add_argument("--stdev-limit", help="Acceptable stdev difference percentage", action="store", default=1, type=int, required=False)
++    parser.add_argument("--tolerate", help="Saves truncated dataset regardles of differences", action="store_true", required=False)
++    parser.add_argument("--retries", help="Number of max retries", action="store", default=10, type=int, required=False)
++    parser.add_argument("--output", "-o", help="Output path", action="store", default="./truncated_metadata.csv", required=False)
++    args = parser.parse_args()
++    return args
++
++def load_test_sentences(dataset_name, metadata_path):
++    dataset_load_function = {
++        "dummy": get_dummy_data,
++        "ljspeech": get_ljspeech_data
++    }
++    with open(metadata_path) as filestream:
++        raw_data = filestream.readlines()
++    return dataset_load_function.get(dataset_name, lambda x: [])(raw_data)
++
++def get_dummy_data(raw_data):
++    reader = csv.reader(raw_data)
++    data = [row for row in reader if row]
++    return data
++
++def get_ljspeech_data(raw_data):
++    reader = csv.reader(raw_data, delimiter="|", quoting=csv.QUOTE_NONE)
++    data = [row for row in reader]
++    return data
++
++def generate_truncated_list(retries, original_list, truncated_num, dataset_name,
++                    tolerate, mean_limit, median_limit, stdev_limit):
++    for i in range(retries):
++        truncated_list = random.sample(original_list, truncated_num)
++        original_sentences_lengths = get_sentences_lengths(dataset_name, original_list)
++        truncated_sentences_lengths = get_sentences_lengths(dataset_name, truncated_list)
++        diff_mean, diff_median, diff_stdev = sentence_length_statistics(original_sentences_lengths,
++                                                                        truncated_sentences_lengths)
++        if tolerate or check_difference(diff_mean, mean_limit,
++                                             diff_median, median_limit,
++                                             diff_stdev, stdev_limit):
++            print(f"[INFO] Acceptable subset generated.")
++            return truncated_list
++    print(f"[INFO] Unable to generate acceptable subset after {retries} retries.")
++    return None
++
++def sentence_length_statistics(original_sentences_lengths, truncated_sentences_lengths):
++    orig_mean = statistics.mean(original_sentences_lengths)
++    orig_median = statistics.median(original_sentences_lengths)
++    orig_stdev = statistics.stdev(original_sentences_lengths)
++    trunc_mean = statistics.mean(truncated_sentences_lengths)
++    trunc_median = statistics.median(truncated_sentences_lengths)
++    trunc_stdev = statistics.stdev(truncated_sentences_lengths)
++    diff_mean = abs(100 - trunc_mean/orig_mean*100)
++    diff_median = abs(100 - trunc_median/orig_median*100)
++    diff_stdev = abs(100 - trunc_stdev/orig_stdev*100)
++    print("[INFO] Original vs truncated dataset comparison:")
++    print(f"[INFO] Original mean: {orig_mean} | Truncated mean: {trunc_mean} | Difference: {diff_mean:.2f}%")
++    print(f"[INFO] Original median: {orig_median} | Truncated median: {trunc_median} | Difference: {diff_median:.2f}%")
++    print(f"[INFO] Original stdev: {orig_stdev} | Truncated stdev: {trunc_stdev} | Difference: {diff_stdev:.2f}%")
++    return diff_mean, diff_median, diff_stdev
++
++def get_sentences_lengths(dataset_name, data):
++    counter_lambdas = {
++        "dummy": lambda x: len(x),
++        "ljspeech": lambda x: len(x[2])
++    }
++    lamb = counter_lambdas.get(dataset_name, lambda x: None)
++    original_sentences_lengths = list(map(lamb, data))
++    return original_sentences_lengths
++
++def check_difference(diff_mean, mean_limit, diff_median, median_limit, diff_stdev, stdev_limit):
++    if diff_mean > mean_limit:
++        print(f"[INFO] Mean difference {diff_mean}% not within {mean_limit}% limit.")
++        return False
++    if diff_median > median_limit:
++        print(f"[INFO] Median difference {diff_median}% not within {median_limit}% limit.")
++        return False
++    if diff_stdev > stdev_limit:
++        print(f"[INFO] Stdev difference {diff_stdev}% not within {stdev_limit}% limit.")
++        return False
++    print(f"[INFO] All statistics within limits.")
++    return True
++
++def save_test_sentences(metadata_path, data, dataset_name):
++    dataset_dialects = {
++        "dummy": {
++            "delimiter": "\n"
++        },
++        "ljspeech": {
++            "delimiter": "|",
++            "quoting": csv.QUOTE_NONE,
++            "quotechar": ""
++        }
++    }
++    dialect = dataset_dialects.get(dataset_name, {})
++    with open(metadata_path, "w") as filestream:
++        writer = csv.writer(filestream, **dialect)
++        writer.writerows(data)
++
++def sniff_dialect(metadata_path):
++    filestream = open(metadata_path)
++    dialect = csv.Sniffer().sniff(filestream.read())
++    filestream.close()
++    return dialect
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/run_tts.sh b/run_tts.sh
+new file mode 100755
+index 0000000..bd0731c
+--- /dev/null
++++ b/run_tts.sh
+@@ -0,0 +1,9 @@
++#!/bin/bash
++
++checkpoint_path=/home2/pytorch-broad-models/TTS/models
++python ./benchmark.py \
++                    --ipex \
++                    --model-path $checkpoint_path/tacotron2/best_model.pth.tar \
++                    --config-path=$checkpoint_path/tacotron2/config.json \
++                    --dataset-name=ljspeech \
++                    --metadata-path=$checkpoint_path/../datasets/ljspeech/truncated_metadata.csv
+diff --git a/setup.py b/setup.py
+index f92dac8..c85d743 100644
+--- a/setup.py
++++ b/setup.py
+@@ -93,8 +93,8 @@ setup(
+     install_requires=[
+         "scipy>=0.19.0",
+         "torch>=0.4.1",
+-        "numpy==1.15.4",
+-        "librosa==0.6.2",
++        "numpy>=1.19.2",
++        "librosa==0.8.0",
+         "unidecode==0.4.20",
+         "attrdict",
+         "tensorboardX",
+diff --git a/utils/synthesis.py b/utils/synthesis.py
+index 1047c16..0af226c 100644
+--- a/utils/synthesis.py
++++ b/utils/synthesis.py
+@@ -3,7 +3,7 @@ import numpy as np
+ from .text import text_to_sequence, phoneme_to_sequence
+ 
+ 
+-def text_to_seqvec(text, CONFIG, use_cuda):
++def text_to_seqvec(text, CONFIG, use_cuda, device='cpu'):
+     text_cleaner = [CONFIG.text_cleaner]
+     # text ot phonemes to sequence vector
+     if CONFIG.use_phonemes:
+@@ -18,6 +18,8 @@ def text_to_seqvec(text, CONFIG, use_cuda):
+     chars_var = torch.from_numpy(seq).unsqueeze(0)
+     if use_cuda:
+         chars_var = chars_var.cuda()
++    else:
++        chars_var = chars_var.to(device)
+     return chars_var.long()
+ 
+ 
+@@ -98,7 +100,8 @@ def synthesis(model,
+               truncated=False,
+               enable_eos_bos_chars=False, #pylint: disable=unused-argument
+               use_griffin_lim=False,
+-              do_trim_silence=False):
++              do_trim_silence=False,
++              device='cpu'):
+     """Synthesize voice for the given text.
+ 
+         Args:
+@@ -120,7 +123,7 @@ def synthesis(model,
+     if CONFIG.model == "TacotronGST" and style_wav is not None:
+         style_mel = compute_style_mel(style_wav, ap, use_cuda)
+     # preprocess the given text
+-    inputs = text_to_seqvec(text, CONFIG, use_cuda)
++    inputs = text_to_seqvec(text, CONFIG, use_cuda, device=device)
+     speaker_id = id_to_torch(speaker_id)
+     if speaker_id is not None and use_cuda:
+         speaker_id = speaker_id.cuda()
+@@ -137,4 +140,4 @@ def synthesis(model,
+         # trim silence
+         if do_trim_silence:
+             wav = trim_silence(wav, ap)
+-    return wav, alignment, decoder_output, postnet_output, stop_tokens
++    return wav, alignment, decoder_output, postnet_output, stop_tokens, inputs.size()

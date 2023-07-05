@@ -1,0 +1,4 @@
+pillow 
+scipy==1.2.2 
+tqdm 
+opencv-python

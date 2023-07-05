@@ -1,0 +1,107 @@
+diff --git a/main.py b/main.py
+index b2ea7c4..be44a66 100644
+--- a/main.py
++++ b/main.py
+@@ -2,6 +2,7 @@ import os
+ import scipy.misc
+ import numpy as np
+ import json
++import time
+ 
+ from model import DCGAN
+ from utils import pp, visualize, to_json, show_all_variables, expand_path, timestamp
+@@ -37,6 +38,10 @@ flags.DEFINE_integer("z_dim", 100, "dimensions of z")
+ flags.DEFINE_string("z_dist", "uniform_signed", "'normal01' or 'uniform_unsigned' or uniform_signed")
+ flags.DEFINE_boolean("G_img_sum", False, "Save generator image summaries in log")
+ #flags.DEFINE_integer("generate_test_images", 100, "Number of images to generate during test. [100]")
++flags.DEFINE_boolean("test", False, "True for calculating inference, False for everything else [False]")
++flags.DEFINE_integer("num_iter", 500, "number of inference iteration")
++flags.DEFINE_integer("num_warmup", 10, "number of warmup iteration")
++flags.DEFINE_string("precision", 'float32', "precision")
+ FLAGS = flags.FLAGS
+ 
+ def main(_):
+@@ -73,7 +78,14 @@ def main(_):
+ 
+   #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+   run_config = tf.ConfigProto()
++  run_config.allow_soft_placement = True
+   run_config.gpu_options.allow_growth=True
++  if FLAGS.precision == 'bfloat16':
++    try:
++      from tensorflow.core.protobuf import rewriter_config_pb2
++      run_config.graph_options.rewrite_options.auto_mixed_precision_mkl = rewriter_config_pb2.RewriterConfig.ON
++    except:
++      print("WARNING: Auto mixed precision got FAILED.")
+ 
+   with tf.Session(config=run_config) as sess:
+     if FLAGS.dataset == 'mnist':
+@@ -142,6 +154,28 @@ def main(_):
+       if FLAGS.visualize:
+         OPTION = 1
+         visualize(sess, dcgan, FLAGS, OPTION, FLAGS.sample_dir)
++      
++      if FLAGS.test:
++        num_iter = FLAGS.num_iter
++        num_warmup = FLAGS.num_warmup
++        total_time = 0.0
++        iter_done =0
++        OPTION = 1
++        for i in range(num_iter):
++          if i < num_warmup:
++            visualize(sess, dcgan, FLAGS, OPTION, FLAGS.sample_dir)
++            continue
++          start = time.time()
++          visualize(sess, dcgan, FLAGS, OPTION, FLAGS.sample_dir)
++          cost = time.time() - start
++          total_time += cost          
++          iter_done += 1
++          print('Iteration done: {}, inference time: {} sec'.format(iter_done, cost))
++        
++        print('Total time: {:.2f} secs'.format(total_time)) 
++        avg_time = total_time / iter_done
++        print('Average time: {:.2f} secs'.format(avg_time))
++        print('Throughput: {:.2f} samples/sec'.format(iter_done / total_time)) 
+ 
+ if __name__ == '__main__':
+   tf.app.run()
+diff --git a/utils.py b/utils.py
+index 3c45c8c..28a8370 100644
+--- a/utils.py
++++ b/utils.py
+@@ -196,7 +196,7 @@ def visualize(sess, dcgan, config, option, sample_dir='samples'):
+   elif option == 1:
+     values = np.arange(0, 1, 1./config.batch_size)
+     for idx in xrange(dcgan.z_dim):
+-      print(" [*] %d" % idx)
++      # print(" [*] %d" % idx)
+       z_sample = np.random.uniform(-1, 1, size=(config.batch_size , dcgan.z_dim))
+       for kdx, z in enumerate(z_sample):
+         z[idx] = values[kdx]
+@@ -214,7 +214,7 @@ def visualize(sess, dcgan, config, option, sample_dir='samples'):
+   elif option == 2:
+     values = np.arange(0, 1, 1./config.batch_size)
+     for idx in [random.randint(0, dcgan.z_dim - 1) for _ in xrange(dcgan.z_dim)]:
+-      print(" [*] %d" % idx)
++      # print(" [*] %d" % idx)
+       z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
+       z_sample = np.tile(z, (config.batch_size, 1))
+       #z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+@@ -237,7 +237,7 @@ def visualize(sess, dcgan, config, option, sample_dir='samples'):
+   elif option == 3:
+     values = np.arange(0, 1, 1./config.batch_size)
+     for idx in xrange(dcgan.z_dim):
+-      print(" [*] %d" % idx)
++      # print(" [*] %d" % idx)
+       z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+       for kdx, z in enumerate(z_sample):
+         z[idx] = values[kdx]
+@@ -249,7 +249,7 @@ def visualize(sess, dcgan, config, option, sample_dir='samples'):
+     values = np.arange(0, 1, 1./config.batch_size)
+ 
+     for idx in xrange(dcgan.z_dim):
+-      print(" [*] %d" % idx)
++      # print(" [*] %d" % idx)
+       z_sample = np.zeros([config.batch_size, dcgan.z_dim])
+       for kdx, z in enumerate(z_sample): z[idx] = values[kdx]
+ 

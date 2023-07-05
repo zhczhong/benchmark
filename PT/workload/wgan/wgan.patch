@@ -1,0 +1,110 @@
+diff --git a/implementations/wgan/wgan.py b/implementations/wgan/wgan.py
+index 6c9008a..ab4837e 100644
+--- a/implementations/wgan/wgan.py
++++ b/implementations/wgan/wgan.py
+@@ -14,26 +14,46 @@ from torch.autograd import Variable
+ import torch.nn as nn
+ import torch.nn.functional as F
+ import torch
++import intel_pytorch_extension as ipex
++import time
+ 
+ os.makedirs("images", exist_ok=True)
+ 
+ parser = argparse.ArgumentParser()
+-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+-parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
++parser.add_argument("--n_epochs", type=int, default=1, help="number of epochs of training")
++parser.add_argument("--batch_size", type=int, default=16, help="size of the batches")
+ parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
+-parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
++parser.add_argument("--n_cpu", type=int, default=32, help="number of cpu threads to use during batch generation")
+ parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
+ parser.add_argument("--img_size", type=int, default=28, help="size of each image dimension")
+ parser.add_argument("--channels", type=int, default=1, help="number of image channels")
+ parser.add_argument("--n_critic", type=int, default=5, help="number of training steps for discriminator per iter")
+ parser.add_argument("--clip_value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
+-parser.add_argument("--sample_interval", type=int, default=400, help="interval betwen image samples")
++parser.add_argument("--sample_interval", type=int, default=4, help="interval betwen image samples")
++parser.add_argument('--outf', default='./model', help='folder to output images and model checkpoints')
++parser.add_argument('--inference', action='store_true', default=False)
++parser.add_argument('--num-iterations', default=10000, type=int)
++parser.add_argument('--ipex', action='store_true', default=False)
++parser.add_argument('--precision', default='float32', help='Precision, "float32" or "bfloat16"')
++parser.add_argument('--jit', action='store_true', default=False)
+ opt = parser.parse_args()
+ print(opt)
+ 
+ img_shape = (opt.channels, opt.img_size, opt.img_size)
+ 
+-cuda = True if torch.cuda.is_available() else False
++try:
++	os.makedirs(opt.outf)
++except OSError:
++	pass
++
++if opt.ipex:
++	if opt.precision == "bfloat16":
++		# Automatically mix precision
++		ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++		print("Running with bfloat16...")
++	device = ipex.DEVICE
++else:
++	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+ 
+ 
+ class Generator(nn.Module):
+@@ -81,12 +101,8 @@ class Discriminator(nn.Module):
+ 
+ 
+ # Initialize generator and discriminator
+-generator = Generator()
+-discriminator = Discriminator()
+-
+-if cuda:
+-    generator.cuda()
+-    discriminator.cuda()
++generator = Generator().to(device)
++discriminator = Discriminator().to(device)
+ 
+ # Configure data loader
+ os.makedirs("../../data/mnist", exist_ok=True)
+@@ -104,9 +120,37 @@ dataloader = torch.utils.data.DataLoader(
+ # Optimizers
+ optimizer_G = torch.optim.RMSprop(generator.parameters(), lr=opt.lr)
+ optimizer_D = torch.optim.RMSprop(discriminator.parameters(), lr=opt.lr)
+-
++cuda = torch.cuda.is_available()
+ Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+ 
++
++def generate(netG, batchsize, device):
++	fixed_noise = Variable(Tensor(np.random.normal(0, 1, (img_shape[0], opt.latent_dim))))
++	dry_run = 5
++	netG.eval()
++	netG = netG.to(device=device)
++	if opt.jit:
++		netG = torch.jit.trace(netG, fixed_noise)
++
++	fixed_noise = fixed_noise.to(device=device)
++	tic = 0
++	with torch.no_grad():
++		for i in range(dry_run + opt.num_iterations):
++			if i == dry_run:
++				tic = time.time()
++			fake = netG(fixed_noise)
++
++	toc = time.time() - tic
++	print("Throughput: %.2f images/sec, batchsize: %d, latency = %.2f sec"%((opt.num_iterations*batchsize)/toc, batchsize, toc/opt.num_iterations))
++
++
++if opt.inference:
++	print("----------------Generation benchmarking---------------")
++	generate(generator, opt.batch_size, device=torch.device(device))
++	import sys
++	sys.exit(0)
++
++
+ # ----------
+ #  Training
+ # ----------

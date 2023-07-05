@@ -1,0 +1,6 @@
+torchvision>=0.6.0
+ninja
+yacs
+cython
+matplotlib
+opencv-python

@@ -1,0 +1,21 @@
+diff --git a/easy_rec/python/main.py b/easy_rec/python/main.py
+index cbaaf5e..0da94f4 100644
+--- a/easy_rec/python/main.py
++++ b/easy_rec/python/main.py
+@@ -13,6 +13,7 @@ import os
+ import six
+ import tensorflow as tf
+ from tensorflow.core.protobuf import saved_model_pb2
++from tensorflow.core.protobuf import rewriter_config_pb2
+ 
+ import easy_rec
+ from easy_rec.python.builders import strategy_builder
+@@ -96,6 +97,8 @@ def _create_estimator(pipeline_config, distribution=None, params={}):
+       inter_op_parallelism_threads=train_config.inter_op_parallelism_threads,
+       intra_op_parallelism_threads=train_config.intra_op_parallelism_threads)
+   session_config.device_filters.append('/job:ps')
++  session_config.graph_options.rewrite_options.auto_mixed_precision_mkl = rewriter_config_pb2.RewriterConfig.ON
++  session_config.graph_options.rewrite_options.auto_mixed_precision = rewriter_config_pb2.RewriterConfig.ON
+   model_cls = EasyRecModel.create_class(model_config.model_class)
+ 
+   save_checkpoints_steps = None

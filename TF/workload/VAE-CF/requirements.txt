@@ -1,0 +1,8 @@
+click
+bson
+pandas
+sklearn
+tqdm
+requests
+bottleneck
+numpy>=1.15

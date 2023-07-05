@@ -1,0 +1,134 @@
+diff --git a/bench/dlrm_s_criteo_kaggle.sh b/bench/dlrm_s_criteo_kaggle.sh
+index 867d8c0..fd32509 100755
+--- a/bench/dlrm_s_criteo_kaggle.sh
++++ b/bench/dlrm_s_criteo_kaggle.sh
+@@ -9,6 +9,8 @@
+ #check if extra argument is passed to the test
+ if [[ $# == 1 ]]; then
+     dlrm_extra_option=$1
++elif [[ $# == 2 ]]; then
++    dlrm_extra_option="$1 $2"
+ else
+     dlrm_extra_option=""
+ fi
+@@ -21,12 +23,12 @@ echo "run pytorch ..."
+ # WARNING: the following parameters will be set based on the data set
+ # --arch-embedding-size=... (sparse feature sizes)
+ # --arch-mlp-bot=... (the input to the first layer of bottom mlp)
+-$dlrm_pt_bin --arch-sparse-feature-size=16 --arch-mlp-bot="13-512-256-64-16" --arch-mlp-top="512-256-1" --data-generation=dataset --data-set=kaggle --raw-data-file=./input/train.txt --processed-data-file=./input/kaggleAdDisplayChallenge_processed.npz --loss-function=bce --round-targets=True --learning-rate=0.1 --mini-batch-size=128 --print-freq=1024 --print-time --test-mini-batch-size=16384 --test-num-workers=16 $dlrm_extra_option 2>&1 | tee run_kaggle_pt.log
++$dlrm_pt_bin --arch-sparse-feature-size=16 --arch-mlp-bot="13-512-256-64-16" --arch-mlp-top="512-256-1" --data-generation=dataset --data-set=kaggle --raw-data-file=dlrm_kaggle/train.txt --processed-data-file=dlrm_kaggle/kaggleAdDisplayChallenge_processed.npz --loss-function=bce --round-targets=True --learning-rate=0.1 --mini-batch-size=128 --print-freq=1024 --print-time --test-mini-batch-size=16384 --test-num-workers=16 --inference-only --ipex $dlrm_extra_option 2>&1 | tee run_kaggle_pt.log
+ 
+-echo "run caffe2 ..."
++# echo "run caffe2 ..."
+ # WARNING: the following parameters will be set based on the data set
+ # --arch-embedding-size=... (sparse feature sizes)
+ # --arch-mlp-bot=... (the input to the first layer of bottom mlp)
+-$dlrm_c2_bin --arch-sparse-feature-size=16 --arch-mlp-bot="13-512-256-64-16" --arch-mlp-top="512-256-1" --data-generation=dataset --data-set=kaggle --raw-data-file=./input/train.txt --processed-data-file=./input/kaggleAdDisplayChallenge_processed.npz --loss-function=bce --round-targets=True --learning-rate=0.1 --mini-batch-size=128 --print-freq=1024 --print-time $dlrm_extra_option 2>&1 | tee run_kaggle_c2.log
++# $dlrm_c2_bin --arch-sparse-feature-size=16 --arch-mlp-bot="13-512-256-64-16" --arch-mlp-top="512-256-1" --data-generation=dataset --data-set=kaggle --raw-data-file=./input/train.txt --processed-data-file=./input/kaggleAdDisplayChallenge_processed.npz --loss-function=bce --round-targets=True --learning-rate=0.1 --mini-batch-size=128 --print-freq=1024 --print-time $dlrm_extra_option 2>&1 | tee run_kaggle_c2.log
+ 
+ echo "done"
+diff --git a/dlrm_s_pytorch.py b/dlrm_s_pytorch.py
+index 5984238..5bd3bf3 100644
+--- a/dlrm_s_pytorch.py
++++ b/dlrm_s_pytorch.py
+@@ -108,6 +108,8 @@ with warnings.catch_warnings():
+ # import torch.nn.functional as Functional
+ # from torch.nn.parameter import Parameter
+ 
++import intel_pytorch_extension as ipex
++
+ exc = getattr(builtins, "IOError", "FileNotFoundError")
+ 
+ 
+@@ -759,11 +761,20 @@ def inference(
+ ):
+     test_accu = 0
+     test_samp = 0
++    t = 0
+ 
+     if args.mlperf_logging:
+         scores = []
+         targets = []
+ 
++    if args.ipex:
++        if args.precision=="bfloat16":
++            conf = ipex.AmpConf(torch.bfloat16)
++            print("running bf16 evalation step\n")
++        else:
++            conf = ipex.AmpConf(None)
++            print("running fp32 evalation step\n")
++    
+     for i, testBatch in enumerate(test_ld):
+         # early exit if nbatches was set by the user and was exceeded
+         if nbatches > 0 and i >= nbatches:
+@@ -792,9 +803,19 @@ def inference(
+         # tensor is on GPU memory
+         if Z_test.is_cuda:
+             torch.cuda.synchronize()
+-        (_, batch_split_lengths) = ext_dist.get_split_lengths(X_test.size(0))
+-        if ext_dist.my_size > 1:
+-            Z_test = ext_dist.all_gather(Z_test, batch_split_lengths)
++        
++        if args.ipex:
++            with ipex.AutoMixPrecision(conf, running_mode="inference"):
++                start = time.time()
++                (_, batch_split_lengths) = ext_dist.get_split_lengths(X_test.size(0))
++                if ext_dist.my_size > 1:
++                    Z_test = ext_dist.all_gather(Z_test, batch_split_lengths)
++                end = time.time()
++                t += end - start
++        else:
++            (_, batch_split_lengths) = ext_dist.get_split_lengths(X_test.size(0))
++            if ext_dist.my_size > 1:
++                Z_test = ext_dist.all_gather(Z_test, batch_split_lengths)
+ 
+         if args.mlperf_logging:
+             S_test = Z_test.detach().cpu().numpy()  # numpy array
+@@ -887,6 +908,7 @@ def inference(
+             ),
+             flush=True,
+         )
++        print('Throughput is: %f its/s' % (len(test_ld) * 0.1 / t))
+     return model_metrics_dict, is_best
+ 
+ 
+@@ -1007,6 +1029,12 @@ def run():
+     parser.add_argument("--lr-num-warmup-steps", type=int, default=0)
+     parser.add_argument("--lr-decay-start-step", type=int, default=0)
+     parser.add_argument("--lr-num-decay-steps", type=int, default=0)
++    parser.add_argument('--ipex', action='store_true', default=False,
++                    help='use intel pytorch extension')
++    parser.add_argument('--precision', type=str, default="float32",
++                        help='precision, float32, bfloat16')
++    parser.add_argument('--jit', action='store_true', default=False,
++                        help='enable ipex jit fusionpath')
+ 
+     global args
+     global nbatches
+@@ -1063,6 +1091,9 @@ def run():
+             ngpus = torch.cuda.device_count()
+             device = torch.device("cuda", 0)
+         print("Using {} GPU(s)...".format(ngpus))
++    elif args.ipex:
++        device = ipex.DEVICE
++        print("Using IPEX...")
+     else:
+         device = torch.device("cpu")
+         print("Using CPU...")
+@@ -1277,11 +1308,15 @@ def run():
+             print(param.detach().cpu().numpy())
+         # print(dlrm)
+ 
++    dlrm = dlrm.to(device)
++    if args.jit:
++        print("running jit fusion path\n")
++        # dlrm = torch.jit.script(dlrm.eval())
++        
+     if use_gpu:
+         # Custom Model-Data Parallel
+         # the mlps are replicated and use data parallelism, while
+         # the embeddings are distributed and use model parallelism
+-        dlrm = dlrm.to(device)  # .cuda()
+         if dlrm.ndevices > 1:
+             dlrm.emb_l, dlrm.v_W_l = dlrm.create_emb(
+                 m_spa, ln_emb, args.weighted_pooling

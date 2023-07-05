@@ -1,0 +1,117 @@
+diff --git a/implementations/srgan/srgan.py b/implementations/srgan/srgan.py
+index dae8c1b..5129fa6 100644
+--- a/implementations/srgan/srgan.py
++++ b/implementations/srgan/srgan.py
+@@ -27,56 +27,98 @@ from datasets import *
+ import torch.nn as nn
+ import torch.nn.functional as F
+ import torch
++import time
+ 
+ os.makedirs("images", exist_ok=True)
+ os.makedirs("saved_models", exist_ok=True)
+ 
+ parser = argparse.ArgumentParser()
+ parser.add_argument("--epoch", type=int, default=0, help="epoch to start training from")
+-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
++parser.add_argument("--n_epochs", type=int, default=1, help="number of epochs of training")
+ parser.add_argument("--dataset_name", type=str, default="img_align_celeba", help="name of the dataset")
+ parser.add_argument("--batch_size", type=int, default=4, help="size of the batches")
+ parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
+ parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
+ parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
+ parser.add_argument("--decay_epoch", type=int, default=100, help="epoch from which to start lr decay")
+-parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
++parser.add_argument("--n_cpu", type=int, default=1, help="number of cpu threads to use during batch generation")
+ parser.add_argument("--hr_height", type=int, default=256, help="high res. image height")
+ parser.add_argument("--hr_width", type=int, default=256, help="high res. image width")
+ parser.add_argument("--channels", type=int, default=3, help="number of image channels")
+ parser.add_argument("--sample_interval", type=int, default=100, help="interval between saving image samples")
+ parser.add_argument("--checkpoint_interval", type=int, default=-1, help="interval between model checkpoints")
++parser.add_argument('--evaluate', action='store_true', default=False, help="evaluate only")
++parser.add_argument('--num-iterations', default=1000, type=int, help="max iterations to run")
++parser.add_argument('--warmup', default=10, type=int, help="iterations to warmup")
++parser.add_argument('--cuda', action='store_true', default=False, help="Use CUDA")
++parser.add_argument('--ipex', action='store_true', default=False, help="Use IPEX")
++parser.add_argument('--precision', default='float32', help='Precision, "float32" or "bfloat16"')
++parser.add_argument('--jit', action='store_true', default=False, help="Use jit script model")
+ opt = parser.parse_args()
+ print(opt)
+ 
+-cuda = torch.cuda.is_available()
++if opt.ipex:
++    import intel_pytorch_extension as ipex
++    print("Running with IPEX...")
++    if opt.precision == "bfloat16":
++        # Automatically mix precision
++        ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++        print("Running with bfloat16...")
++    device = ipex.DEVICE
++else:
++    device = torch.device("cuda:0" if cuda else "cpu")
+ 
+ hr_shape = (opt.hr_height, opt.hr_width)
+ 
+ # Initialize generator and discriminator
+-generator = GeneratorResNet()
+-discriminator = Discriminator(input_shape=(opt.channels, *hr_shape))
+-feature_extractor = FeatureExtractor()
++generator = GeneratorResNet().to(device)
++discriminator = Discriminator(input_shape=(opt.channels, *hr_shape)).to(device)
++feature_extractor = FeatureExtractor().to(device)
+ 
+ # Set feature extractor to inference mode
+ feature_extractor.eval()
+ 
+ # Losses
+-criterion_GAN = torch.nn.MSELoss()
+-criterion_content = torch.nn.L1Loss()
++criterion_GAN = torch.nn.MSELoss().to(device)
++criterion_content = torch.nn.L1Loss().to(device)
+ 
+-if cuda:
+-    generator = generator.cuda()
+-    discriminator = discriminator.cuda()
+-    feature_extractor = feature_extractor.cuda()
+-    criterion_GAN = criterion_GAN.cuda()
+-    criterion_content = criterion_content.cuda()
++# if cuda:
++#     generator = generator.cuda()
++#     discriminator = discriminator.cuda()
++#     feature_extractor = feature_extractor.cuda()
++#     criterion_GAN = criterion_GAN.cuda()
++#     criterion_content = criterion_content.cuda()
+ 
+ if opt.epoch != 0:
+     # Load pretrained models
+     generator.load_state_dict(torch.load("saved_models/generator_%d.pth"))
+     discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"))
+ 
++def generate(netG, batchsize, device):
++    imgs_lr = torch.randn(opt.batch_size, 3, opt.hr_height // 4, opt.hr_width // 4).to(device)
++    netG.eval()
++    if opt.jit:
++        # netG = torch.jit.trace(netG, imgs_lr)
++        netG = torch.jit.script(netG)
++
++    toc = 0
++    with torch.no_grad():
++        for i in range(opt.warmup + opt.num_iterations):
++            if i >= opt.warmup:
++                tic = time.time()
++            fake = netG(imgs_lr)
++            if i >= opt.warmup:
++                toc += time.time() - tic
++            if i % 10 == 0:
++                print("interations:{}/{}".format(i + 1, opt.warmup + opt.num_iterations))
++    print("Throughput: %.3f images/sec, batchsize: %d, latency = %.3f sec"%((opt.num_iterations*batchsize)/toc, batchsize, toc/opt.num_iterations/batchsize))
++
++if opt.evaluate:
++    print("----------------Generation benchmarking---------------")
++    generate(generator, opt.batch_size, device=torch.device(device))
++    import sys
++    sys.exit(0)
++
+ # Optimizers
+ optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
+ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))

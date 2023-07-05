@@ -1,0 +1,16 @@
+diff --git a/benchmarks/language_modeling/tensorflow/bert_large/inference/int8/model_init.py b/benchmarks/language_modeling/tensorflow/bert_large/inference/int8/model_init.py
+index 51c3bf4a..af73fa0a 100644
+--- a/benchmarks/language_modeling/tensorflow/bert_large/inference/int8/model_init.py
++++ b/benchmarks/language_modeling/tensorflow/bert_large/inference/int8/model_init.py
+@@ -116,9 +116,8 @@ class ModelInitializer(BaseModelInitializer):
+             model_args += " --mode=accuracy"
+
+         if self.args.profile and self.args.profile.lower() == "true":
+-            model_args += " --mode=profile"
+-
+-        if self.args.benchmark_only:
++            model_args += " --mode=profile --profile=True"
++        elif self.args.benchmark_only:
+             model_args += " --mode=benchmark"
+
+         if self.args.doc_stride:

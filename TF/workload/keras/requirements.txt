@@ -1,0 +1,11 @@
+gym
+typeguard
+imgaug
+pandas
+tensorflow_datasets
+tensorflow_probability
+transformers
+ipython
+tqdm
+scikit-learn
+pygame

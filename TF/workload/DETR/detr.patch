@@ -1,0 +1,96 @@
+diff --git a/detr_tf/training_config.py b/detr_tf/training_config.py
+index 4f884d7..6da2794 100644
+--- a/detr_tf/training_config.py
++++ b/detr_tf/training_config.py
+@@ -35,6 +35,11 @@ def training_config_parser():
+     # Logging
+     parser.add_argument("--log",  required=False, action="store_true", default=False, help="Log into wandb")
+
++    # Inference
++    parser.add_argument("--num_iter",  type=int, required=False, default=-1, help="Number of inference iterations")
++    parser.add_argument("--num_warmup",  type=int, required=False, default=10, help="Number of warmup iterations")
++    parser.add_argument("--precision",  type=str, required=False, default="float32", help="float32 or bfloat16")
++
+     return parser
+
+
+@@ -68,6 +73,10 @@ class TrainingConfig():
+         self.nlayers_lr = tf.Variable(1e-4)
+         self.nlayers = []
+
++        self.num_iter = -1
++        self.num_warmup = 10
++        self.precision = "float32"
++
+         # Training progress
+         self.global_step = 0
+         self.log = False
+@@ -111,8 +120,7 @@ class DataConfig():
+         self.ann_file = os.path.join(self.data_dir, ann_file) if ann_file is not None else None
+         self.ann_dir = os.path.join(self.data_dir, ann_dir) if ann_dir is not None else None
+
+-
+ if __name__ == "__main__":
+     args = training_config_parser()
+     config = TrainingConfig()
+-    config.update_from_args(args)
+\ No newline at end of file
++    config.update_from_args(args)
+diff --git a/eval.py b/eval.py
+index 98c6189..92d1d41 100644
+--- a/eval.py
++++ b/eval.py
+@@ -6,6 +6,7 @@ import tensorflow as tf
+ import os
+ import matplotlib.pyplot as plt
+ import numpy as np
++import time
+
+ from detr_tf.inference import get_model_inference
+ from detr_tf.data.coco import load_coco_dataset
+@@ -36,9 +37,17 @@ def eval_model(model, config, class_names, valid_dt):
+         'box' : [[APDataObject() for _ in class_names] for _ in iou_thresholds],
+         'mask': [[APDataObject() for _ in class_names] for _ in iou_thresholds]
+     }
++
+     it = 0
++    total_time = 0
++    iter_done = 0
+
++    num_warmup = config.num_warmup
++    num_iter = config.num_iter
+     for images, target_bbox, target_class in valid_dt:
++        if num_iter != -1 and it >= num_iter:
++            break
++        start = time.time()
+         # Forward pass
+         m_outputs = model(images)
+         # Run predictions
+@@ -52,10 +61,15 @@ def eval_model(model, config, class_names, valid_dt):
+         t_class = tf.squeeze(t_class, axis=-1)
+         # Compute map
+         cal_map(p_bbox, p_labels, p_scores,  np.zeros((138, 138, len(p_bbox))), np.array(t_bbox), np.array(t_class), np.zeros((138, 138, len(t_bbox))), ap_data, iou_thresholds)
+-        print(f"Computing map.....{it}", end="\r")
++        end = time.time()
++        process_time = end - start
++        if it >= num_warmup:
++            total_time += process_time
++            iter_done += 1
++        print("Iteration: {}, inference time: {} sec".format(it, process_time))
+         it += 1
+-        #if it > 10:
+-        #    break
++    print('Iter done: {} iteraions'.format(iter_done))
++    print('Throughput: {:.2f} samples/sec'.format(iter_done / total_time))
+
+     # Compute the mAp over all thresholds
+     calc_map(ap_data, iou_thresholds, class_names, print_result=True)
+@@ -73,7 +87,7 @@ if __name__ == "__main__":
+     # Load the model with the new layers to finetune
+     detr = build_model(config)
+
+-    valid_dt, class_names = load_coco_dataset(config, 1, augmentation=None)
++    valid_dt, class_names = load_coco_dataset(config, batch_size=config.batch_size, augmentation=None)
+
+     # Run training
+     eval_model(detr, config, class_names, valid_dt)

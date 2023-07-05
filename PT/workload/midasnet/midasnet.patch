@@ -1,0 +1,209 @@
+diff --git a/run.py b/run.py
+index 0779413..74eb8fc 100644
+--- a/run.py
++++ b/run.py
+@@ -11,6 +11,8 @@ from torchvision.transforms import Compose
+ from midas.midas_net import MidasNet
+ from midas.midas_net_custom import MidasNet_small
+ from midas.transforms import Resize, NormalizeImage, PrepareForNet
++import intel_pytorch_extension as ipex
++import time
+ 
+ 
+ def run(input_path, output_path, model_path, model_type="large", optimize=True):
+@@ -24,7 +26,10 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
+     print("initialize")
+ 
+     # select device
+-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++    if args.ipex:
++        device = ipex.DEVICE
++    else:
++        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+     print("device: %s" % device)
+ 
+     # load network
+@@ -32,12 +37,13 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
+         model = MidasNet(model_path, non_negative=True)
+         net_w, net_h = 384, 384
+     elif model_type == "small":
+-        model = MidasNet_small(model_path, features=64, backbone="efficientnet_lite3", exportable=True, non_negative=True, blocks={'expand': True})
++        model = MidasNet_small(model_path, features=64, backbone="efficientnet_lite3",
++                               exportable=True, non_negative=True, blocks={'expand': True})
+         net_w, net_h = 256, 256
+     else:
+         print(f"model_type '{model_type}' not implemented, use: --model_type large")
+         assert False
+-    
++
+     transform = Compose(
+         [
+             Resize(
+@@ -55,26 +61,35 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
+     )
+ 
+     model.eval()
+-    
+-    if optimize==True:
++
++    model.to(device)
++    if args.ipex:
++        print("using ipex model to do inference\n")
++        if args.precision == "bfloat16":
++            ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++            print("running bf16 evalation step\n")
++        else:
++            print("running fp32 evalation step\n")
++
++    if optimize == True:
++        print("running jit fusion path\n")
+         rand_example = torch.rand(1, 3, net_h, net_w)
+         model(rand_example)
+         traced_script_module = torch.jit.trace(model, rand_example)
+         model = traced_script_module
+-    
++
+         if device == torch.device("cuda"):
+-            model = model.to(memory_format=torch.channels_last)  
++            model = model.to(memory_format=torch.channels_last)
+             model = model.half()
+ 
+-    model.to(device)
+ 
+     # get input
+     img_names = glob.glob(os.path.join(input_path, "*"))
+     num_images = len(img_names)
++    all_time = 0
+ 
+     # create output folder
+     os.makedirs(output_path, exist_ok=True)
+-
+     print("start processing")
+ 
+     for ind, img_name in enumerate(img_names):
+@@ -88,58 +103,88 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
+ 
+         # compute
+         with torch.no_grad():
+-            sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
+-            if optimize==True and device == torch.device("cuda"):
+-                sample = sample.to(memory_format=torch.channels_last)  
+-                sample = sample.half()
+-            prediction = model.forward(sample)
+-            prediction = (
+-                torch.nn.functional.interpolate(
+-                    prediction.unsqueeze(1),
+-                    size=img.shape[:2],
+-                    mode="bicubic",
+-                    align_corners=False,
++            if args.ipex:
++                sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
++                if ind >= args.warmup_iterations:
++                    end = time.time()
++                prediction = model.forward(sample)
++                prediction = (
++                    torch.nn.functional.interpolate(
++                        prediction.unsqueeze(1),
++                        size=img.shape[:2],
++                        mode="bicubic",
++                        align_corners=False,
++                    )
++                    .squeeze()
++                    .cpu()
++                    .numpy()
+                 )
+-                .squeeze()
+-                .cpu()
+-                .numpy()
+-            )
++                if ind >= args.warmup_iterations:
++                    all_time += time.time() - end
++            else:
++                sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
++                if optimize == True and device == torch.device("cuda"):
++                    sample = sample.to(memory_format=torch.channels_last)
++                    sample = sample.half()
++                if ind >= args.warmup_iterations:
++                    end = time.time()
++                prediction = model.forward(sample)
++                prediction = (
++                    torch.nn.functional.interpolate(
++                        prediction.unsqueeze(1),
++                        size=img.shape[:2],
++                        mode="bicubic",
++                        align_corners=False,
++                    )
++                    .squeeze()
++                    .cpu()
++                    .numpy()
++                )
++                if ind >= args.warmup_iterations:
++                    all_time += time.time() - end
+ 
+-        # output
+-        filename = os.path.join(
+-            output_path, os.path.splitext(os.path.basename(img_name))[0]
+-        )
+-        utils.write_depth(filename, prediction, bits=2)
++            # output
++            filename = os.path.join(
++                output_path, os.path.splitext(os.path.basename(img_name))[0]
++            )
++            utils.write_depth(filename, prediction, bits=2)
+ 
++    print('Throughput is: %f imgs/s' % (num_images / all_time))
+     print("finished")
+ 
+ 
+ if __name__ == "__main__":
+     parser = argparse.ArgumentParser()
+ 
+-    parser.add_argument('-i', '--input_path', 
+-        default='input',
+-        help='folder with input images'
+-    )
++    parser.add_argument('-i', '--input_path',
++                        default='input',
++                        help='folder with input images'
++                        )
+ 
+-    parser.add_argument('-o', '--output_path', 
+-        default='output',
+-        help='folder for output images'
+-    )
++    parser.add_argument('-o', '--output_path',
++                        default='output',
++                        help='folder for output images'
++                        )
+ 
+-    parser.add_argument('-m', '--model_weights', 
+-        default='model-f6b98070.pt',
+-        help='path to the trained weights of model'
+-    )
++    parser.add_argument('-m', '--model_weights',
++                        default='model-f6b98070.pt',
++                        help='path to the trained weights of model'
++                        )
+ 
+-    parser.add_argument('-t', '--model_type', 
+-        default='large',
+-        help='model type: large or small'
+-    )
++    parser.add_argument('-t', '--model_type',
++                        default='large',
++                        help='model type: large or small'
++                        )
+ 
+     parser.add_argument('--optimize', dest='optimize', action='store_true')
+     parser.add_argument('--no-optimize', dest='optimize', action='store_false')
+-    parser.set_defaults(optimize=True)
++    parser.add_argument('--ipex', action='store_true', default=False,
++                        help='use intel pytorch extension')
++    parser.add_argument('--precision', type=str, default="float32",
++                        help='precision, float32, bfloat16')
++    parser.add_argument('-w', '--warmup_iterations', default=5, type=int, metavar='N',
++                        help='number of warmup iterations to run')
++    parser.set_defaults(optimize=False)
+ 
+     args = parser.parse_args()
+ 

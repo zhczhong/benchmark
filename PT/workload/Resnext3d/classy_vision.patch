@@ -1,0 +1,113 @@
+diff --git a/test/models_resnext3d_test.py b/test/models_resnext3d_test.py
+index f575ab1..02abcb0 100644
+--- a/test/models_resnext3d_test.py
++++ b/test/models_resnext3d_test.py
+@@ -6,8 +6,10 @@
+ 
+ import copy
+ import unittest
+-from test.generic.utils import compare_model_state
+-
++import intel_pytorch_extension as ipex
++from intel_pytorch_extension import core
++from generic.utils import compare_model_state
++import time
+ import torch
+ from classy_vision.models import ClassyModel, build_model
+ 
+@@ -40,15 +42,15 @@ class TestResNeXt3D(unittest.TestCase):
+         }
+         pbt = "postactivated_bottleneck_transformation"
+         model_config_variants = [
+-            # ResNeXt3D-34
+-            {
+-                "residual_transformation_type": "basic_transformation",
+-                "num_blocks": [3, 4, 6, 3],
+-            },
++            # # ResNeXt3D-34
++            # {
++            #     "residual_transformation_type": "basic_transformation",
++            #     "num_blocks": [3, 4, 6, 3],
++            # },
+             # ResNeXt3D-50
+             {"residual_transformation_type": pbt, "num_blocks": [3, 4, 6, 3]},
+-            # ResNeXt3D-101
+-            {"residual_transformation_type": pbt, "num_blocks": [3, 4, 23, 3]},
++            # # ResNeXt3D-101
++            # {"residual_transformation_type": pbt, "num_blocks": [3, 4, 23, 3]},
+         ]
+ 
+         self.model_configs = []
+@@ -67,17 +69,17 @@ class TestResNeXt3D(unittest.TestCase):
+         self.batchsize = 1
+ 
+         self.forward_pass_configs = {
+-            "train": {
+-                # input shape: N x C x T x H x W
+-                "input": {"video": torch.rand(self.batchsize, 3, 16, 112, 112)},
+-                "model": {
+-                    "stem_maxpool": False,
+-                    "stage_temporal_stride": [1, 2, 2, 2],
+-                    "stage_spatial_stride": [1, 2, 2, 2],
+-                },
+-            },
++            # "train": {
++            #     # input shape: N x C x T x H x W
++            #     "input": {"video": torch.rand(self.batchsize, 3, 16, 112, 112)},
++            #     "model": {
++            #         "stem_maxpool": False,
++            #         "stage_temporal_stride": [1, 2, 2, 2],
++            #         "stage_spatial_stride": [1, 2, 2, 2],
++            #     },
++            # },
+             "test": {
+-                "input": {"video": torch.rand(self.batchsize, 3, 16, 256, 320)},
++                "input": {"video": torch.rand(self.batchsize, 3, 16, 256, 320).to(device = ipex.DEVICE)},
+                 "model": {
+                     "stem_maxpool": True,
+                     "stage_temporal_stride": [1, 2, 2, 2],
+@@ -104,11 +106,32 @@ class TestResNeXt3D(unittest.TestCase):
+                 num_classes = forward_pass_model_config["heads"][0]["num_classes"]
+ 
+                 model = build_model(forward_pass_model_config)
+-                model.train(split == "train")
+-
+-                out = model(split_config["input"])
+-
+-                self.assertEqual(out.size(), (self.batchsize, num_classes))
++                model = model.eval()
++                model = model.to(device = ipex.DEVICE)
++                ipex.core.enable_jit_opt()
++                ipex.core.enable_auto_dnnl()
++                trace_model = torch.jit.trace(model, split_config["input"])
++                warmup_steps = 10
++                iters = 100
++                # warmup
++                for i in range(warmup_steps):
++                    out = trace_model(split_config["input"])
++                ##run inference
++                total_time = 0.0
++                reps_done = 0
++                for i in range(iters):
++                    start = time.time()
++                    out = trace_model(split_config["input"])
++                    end = time.time()
++                    delta = end - start
++                    total_time += delta
++                    reps_done += 1
++                avg_time = total_time / reps_done
++                latency = avg_time * 1000
++                throughput = 1.0 / avg_time
++                print('Latency: %.3f ms' % (latency))
++                print('Throughput: %.3f images/sec' % throughput)
++                # self.assertEqual(out.size(), (self.batchsize, num_classes))
+ 
+     def test_set_classy_state_plain(self):
+         # We use the same model architecture to save and load a model state.
+@@ -234,3 +257,6 @@ class TestResNeXt3D(unittest.TestCase):
+         model_3d = build_model(model_3d_config)
+         with self.assertRaises(AssertionError):
+             model_3d.set_classy_state(model_2d_state)
++case = TestResNeXt3D()
++case.setUp()
++case.test_forward_pass()

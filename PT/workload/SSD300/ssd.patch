@@ -1,0 +1,364 @@
+diff --git a/community b/community
+deleted file mode 160000
+index eebf719..0000000
+--- a/community
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit eebf719c1b2174243c5d275dc57acc045bb3722d
+diff --git a/single_stage_detector/ssd/train.py b/single_stage_detector/ssd/train.py
+index badfe52..b2ab997 100644
+--- a/single_stage_detector/ssd/train.py
++++ b/single_stage_detector/ssd/train.py
+@@ -12,6 +12,11 @@ import random
+ import numpy as np
+ from mlperf_compliance import mlperf_log
+ from mlperf_logger import ssd_print, broadcast_seeds
++try:
++    import intel_pytorch_extension as ipex
++    USE_IPEX = True
++except:
++    USE_IPEX = False
+ 
+ def parse_args():
+     parser = ArgumentParser(description="Train Single Shot MultiBox Detector"
+@@ -34,9 +39,17 @@ def parse_args():
+                         help='path to model checkpoint file')
+     parser.add_argument('--no-save', action='store_true',
+                         help='save model checkpoints')
++    parser.add_argument('--ipex', action='store_true', default=False,
++                        help='enable Intel_PyTorch_Extension')
++    parser.add_argument('--precision', type=str, default='float32',
++                        help='data type precision, default is float32.')
+     parser.add_argument('--evaluation', nargs='*', type=int,
+-                        default=[40, 50, 55, 60, 65, 70, 75, 80],
++                        default=[10, 20, 40, 50, 55, 60, 65, 70, 75, 80],
+                         help='epochs at which to evaluate')
++    parser.add_argument('--eval-only', action='store_true',
++                        help='do evaluation only')
++    parser.add_argument('--bench-mark', action='store_true', default=True,
++                        help='bench-mark only')
+     parser.add_argument('--lr-decay-schedule', nargs='*', type=int,
+                         default=[40, 50],
+                         help='epochs at which to decay the learning rate')
+@@ -44,6 +57,8 @@ def parse_args():
+                         help='how long the learning rate will be warmed up in fraction of epochs')
+     parser.add_argument('--warmup-factor', type=int, default=0,
+                         help='mlperf rule parameter for controlling warmup curve')
++    parser.add_argument('--perf-prerun-warmup', type=int, default=5,
++                        help='how much iterations to pre run before performance test, -1 mean use all dataset.')
+     parser.add_argument('--lr', type=float, default=2.5e-3,
+                         help='base learning rate')
+     # Distributed stuff
+@@ -54,6 +69,42 @@ def parse_args():
+     return parser.parse_args()
+ 
+ 
++def save_time(file_name, content):
++    import json
++    #file_name = os.path.join(args.log, 'result_' + str(idx) + '.json')
++    finally_result = []
++    with open(file_name, "r",encoding="utf-8") as f:
++        data = json.loads(f.read())
++        finally_result += data
++        finally_result += content
++        with open(file_name,"w",encoding="utf-8") as f:
++            f.write(json.dumps(finally_result,ensure_ascii=False,indent=2))
++
++
++class AverageMeter(object):
++    """Computes and stores the average and current value"""
++    def __init__(self, name, fmt=':f'):
++        self.name = name
++        self.fmt = fmt
++        self.reset()
++
++    def reset(self):
++        self.val = 0
++        self.avg = 0
++        self.sum = 0
++        self.count = 0
++
++    def update(self, val, n=1):
++        self.val = val
++        self.sum += val * n
++        self.count += n
++        self.avg = self.sum / self.count
++
++    def __str__(self):
++        fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
++        return fmtstr.format(**self.__dict__)
++
++
+ def show_memusage(device=0):
+     import gpustat
+     gpu_stats = gpustat.GPUStatCollection.new_query()
+@@ -83,12 +134,17 @@ def dboxes300_coco():
+ 
+ 
+ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+-              epoch, iteration, use_cuda=True):
++              epoch, iteration, args, use_cuda=True, use_ipex=False, bench_mark=True):
+     from pycocotools.cocoeval import COCOeval
++
++    batch_time = AverageMeter('Time', ':6.3f')
++
+     print("")
+     model.eval()
+     if use_cuda:
+         model.cuda()
++    elif use_ipex:
++        model.to(ipex.DEVICE)
+     ret = []
+ 
+     overlap_threshold = 0.50
+@@ -100,6 +156,13 @@ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+ 
+     ssd_print(key=mlperf_log.EVAL_START, value=epoch, sync=False)
+ 
++    if use_ipex:
++        for idx, image_id in enumerate(coco.img_keys):
++            img, (htot, wtot), _, _ = coco[idx]
++            inp = img.unsqueeze(0).to(ipex.DEVICE)
++            model = torch.jit.trace(model, inp)
++            break
++
+     start = time.time()
+     for idx, image_id in enumerate(coco.img_keys):
+         img, (htot, wtot), _, _ = coco[idx]
+@@ -109,6 +172,11 @@ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+             inp = img.unsqueeze(0)
+             if use_cuda:
+                 inp = inp.cuda()
++            elif use_ipex:
++                inp = inp.to(ipex.DEVICE)
++
++            if args.perf_prerun_warmup > 0 and idx >= args.perf_prerun_warmup:
++                        start_time=time.time()
+             ploc, plabel = model(inp)
+ 
+             try:
+@@ -121,6 +189,9 @@ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+                 print("")
+                 print("No object detected in idx: {}".format(idx))
+                 continue
++            finally:
++                if idx >= args.perf_prerun_warmup:
++                    batch_time.update(time.time()-start_time)
+ 
+             loc, label, prob = [r.cpu().numpy() for r in result]
+             for loc_, label_, prob_ in zip(loc, label, prob):
+@@ -131,8 +202,12 @@ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+                                       prob_,
+                                       inv_map[label_]])
+     print("")
+-    print("Predicting Ended, total time: {:.2f} s".format(time.time()-start))
+-
++    latency = batch_time.avg / 1 * 1000
++    perf = 1 / batch_time.avg
++    print('inference latency %3.0f ms'%latency)
++    print('inference Throughput: %3.0f fps'%perf)
++    if bench_mark:
++       return
+     cocoDt = cocoGt.loadRes(np.array(ret))
+ 
+     E = COCOeval(cocoGt, cocoDt, iouType='bbox')
+@@ -159,19 +234,27 @@ def coco_eval(model, coco, cocoGt, encoder, inv_map, threshold,
+     return current_accuracy>= threshold #Average Precision  (AP) @[ IoU=050:0.95 | area=   all | maxDets=100 ]
+ 
+ def lr_warmup(optim, wb, iter_num, base_lr, args):
+-	if iter_num < wb:
+-		# mlperf warmup rule
+-		warmup_step = base_lr / (wb * (2 ** args.warmup_factor))
+-		new_lr = base_lr - (wb - iter_num) * warmup_step
++    if iter_num < wb:
++        # mlperf warmup rule
++        warmup_step = base_lr / (wb * (2 ** args.warmup_factor))
++        new_lr = base_lr - (wb - iter_num) * warmup_step
+ 
+-		for param_group in optim.param_groups:
+-			param_group['lr'] = new_lr
++        for param_group in optim.param_groups:
++            param_group['lr'] = new_lr
+ 
+ def train300_mlperf_coco(args):
+     global torch
+     from coco import COCO
+     # Check that GPUs are actually available
+     use_cuda = not args.no_cuda and torch.cuda.is_available()
++
++    if args.ipex:
++        assert USE_IPEX, "No module: intel_pytorch_extension"
++        if args.precision == "bfloat16":
++            # Automatically mix precision
++            ipex.enable_auto_mixed_precision(mixed_dtype = torch.bfloat16)
++            print("Running with bfloat16...")
++
+     args.distributed = False
+     if use_cuda:
+         try:
+@@ -187,7 +270,13 @@ def train300_mlperf_coco(args):
+         import torch.distributed as dist
+  #     ssd_print(key=mlperf_log.RUN_SET_RANDOM_SEED)
+         if args.no_cuda:
+-            device = torch.device('cpu')
++            if args.ipex:
++               print("run on ipex path...")
++               ipex.enable_auto_optimization()
++               device = torch.device('dpcpp')
++            else:
++               device = torch.device('cpu')
++
+         else:
+             torch.cuda.set_device(args.local_rank)
+             device = torch.device('cuda')
+@@ -243,15 +332,19 @@ def train300_mlperf_coco(args):
+     ssd300.train()
+     if use_cuda:
+         ssd300.cuda()
++    elif USE_IPEX:
++        ssd300.to(ipex.DEVICE)
+     loss_func = Loss(dboxes)
+     if use_cuda:
+         loss_func.cuda()
++    elif USE_IPEX:
++        loss_func.to(ipex.DEVICE)
+     if args.distributed:
+         N_gpu = torch.distributed.get_world_size()
+     else:
+         N_gpu = 1
+ 
+-	# parallelize
++    # parallelize
+     if args.distributed:
+         ssd300 = DDP(ssd300)
+ 
+@@ -276,7 +369,8 @@ def train300_mlperf_coco(args):
+     success = torch.zeros(1)
+     if use_cuda:
+         success = success.cuda()
+-
++    elif USE_IPEX:
++        success = success.to(ipex.DEVICE)
+ 
+     if args.warmup:
+         nonempty_imgs = len(train_coco)
+@@ -299,32 +393,36 @@ def train300_mlperf_coco(args):
+                 param_group['lr'] = current_lr
+             ssd_print(key=mlperf_log.OPT_LR,
+                                  value=current_lr)
+-
+-        for nbatch, (img, img_size, bbox, label) in enumerate(train_dataloader):
+-
+-            if use_cuda:
+-                img = img.cuda()
+-            img = Variable(img, requires_grad=True)
+-            ploc, plabel = ssd300(img)
+-            trans_bbox = bbox.transpose(1,2).contiguous()
+-            if use_cuda:
+-                trans_bbox = trans_bbox.cuda()
+-                label = label.cuda()
+-            gloc, glabel = Variable(trans_bbox, requires_grad=False), \
+-                           Variable(label, requires_grad=False)
+-            loss = loss_func(ploc, plabel, gloc, glabel)
+-
+-            if not np.isinf(loss.item()): avg_loss = 0.999*avg_loss + 0.001*loss.item()
+-
+-            print("Iteration: {:6d}, Loss function: {:5.3f}, Average Loss: {:.3f}"\
+-                        .format(iter_num, loss.item(), avg_loss), end="\r")
+-            optim.zero_grad()
+-            loss.backward()
+-            warmup_step(iter_num, current_lr)
+-            optim.step()
+-
+-            iter_num += 1
+-
++        if not args.eval_only:
++            for nbatch, (img, img_size, bbox, label) in enumerate(train_dataloader):
++                if use_cuda:
++                    img = img.cuda()
++                elif USE_IPEX:
++                    img = img.to(ipex.DEVICE)
++                img = Variable(img, requires_grad=True)
++                ploc, plabel = ssd300(img)
++                trans_bbox = bbox.transpose(1,2).contiguous()
++                if use_cuda:
++                    trans_bbox = trans_bbox.cuda()
++                    label = label.cuda()
++                elif USE_IPEX:
++                    trans_bbox = trans_bbox.to(ipex.DEVICE)
++                    label = label.to(ipex.DEVICE)
++
++                gloc, glabel = Variable(trans_bbox, requires_grad=False), \
++                               Variable(label, requires_grad=False)
++                loss = loss_func(ploc, plabel, gloc, glabel)
++
++                if not np.isinf(loss.item()): avg_loss = 0.999*avg_loss + 0.001*loss.item()
++
++                print("Iteration: {:6d}, Loss function: {:5.3f}, Average Loss: {:.3f}"\
++                            .format(iter_num, loss.item(), avg_loss), end="\r")
++                optim.zero_grad()
++                loss.backward()
++                warmup_step(iter_num, current_lr)
++                optim.step()
++
++                iter_num += 1
+         if epoch + 1 in eval_points:
+             rank = dist.get_rank() if args.distributed else args.local_rank
+             if args.distributed:
+@@ -339,12 +437,13 @@ def train300_mlperf_coco(args):
+                     print("saving model...")
+                     torch.save({"model" : ssd300.state_dict(), "label_map": train_coco.label_info},
+                                "./models/iter_{}.pt".format(iter_num))
+-
+                 if coco_eval(ssd300, val_coco, cocoGt, encoder, inv_map,
+-                            args.threshold, epoch + 1,iter_num):
++                            args.threshold, epoch + 1,iter_num, args, use_cuda, USE_IPEX, args.bench_mark):
+                     success = torch.ones(1)
+                     if use_cuda:
+                         success = success.cuda()
++                    elif USE_IPEX:
++                        success = success.to(ipex.DEVICE)
+             if args.distributed:
+                 dist.broadcast(success, 0)
+             if success[0]:
+@@ -355,7 +454,7 @@ def train300_mlperf_coco(args):
+ def main():
+     args = parse_args()
+ 
+-    if args.local_rank == 0:
++    if args.local_rank == 0 and not args.no_save:
+         if not os.path.isdir('./models'):
+             os.mkdir('./models')
+ 
+@@ -363,7 +462,6 @@ def main():
+ 
+     # start timing here
+     ssd_print(key=mlperf_log.RUN_START)
+-
+     success = train300_mlperf_coco(args)
+ 
+     # end timing here
+diff --git a/single_stage_detector/ssd/utils.py b/single_stage_detector/ssd/utils.py
+index ded3ee5..168e18e 100644
+--- a/single_stage_detector/ssd/utils.py
++++ b/single_stage_detector/ssd/utils.py
+@@ -32,8 +32,8 @@ def calc_iou_tensor(box1, box2):
+     N = box1.size(0)
+     M = box2.size(0)
+ 
+-    be1 = box1.unsqueeze(1).expand(-1, M, -1)
+-    be2 = box2.unsqueeze(0).expand(N, -1, -1)
++    be1 = box1.unsqueeze(1).expand(-1, M, -1).float()
++    be2 = box2.unsqueeze(0).expand(N, -1, -1).float()
+ 
+     # Left Top & Right Bottom
+     lt = torch.max(be1[:, :, :2], be2[:, :, :2])
+@@ -104,7 +104,7 @@ class Encoder(object):
+         labels_out = torch.zeros(self.nboxes, dtype=torch.long)
+         # print(maxloc.shape, labels_in.shape, labels_out.shape)
+         labels_out[masks] = labels_in[best_dbox_idx[masks]]
+-        bboxes_out = self.dboxes.clone()
++        bboxes_out = self.dboxes.clone().double
+         bboxes_out[masks, :] = bboxes_in[best_dbox_idx[masks], :]
+         # Transform format to xywh format
+         x, y, w, h = 0.5 * (bboxes_out[:, 0] + bboxes_out[:, 2]), \

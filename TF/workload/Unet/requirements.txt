@@ -1,0 +1,7 @@
+tqdm
+numpy
+opencv-python
+imgaug>=0.4.0
+imageio==2.5.0
+Shapely
+scikit-image>=0.14.2

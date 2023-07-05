@@ -1,0 +1,78 @@
+diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
+index b8e6e49..0907a94 100755
+--- a/src/transformers/trainer.py
++++ b/src/transformers/trainer.py
+@@ -23,6 +23,7 @@ import shutil
+ import warnings
+ from pathlib import Path
+ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
++import time
+ 
+ import numpy as np
+ import torch
+@@ -1257,10 +1258,32 @@ class Trainer:
+             self._past = None
+ 
+         self.callback_handler.eval_dataloader = dataloader
++        total_time = 0
++        total_data = 0
++        if self.args.mkldnn:
++            import intel_pytorch_extension as ipex
++            model = model.to(ipex.DEVICE)
++            if self.args.jit:
++                ipex.core.enable_jit_opt()
++                model = torch.jit.script(model)
++
++        for index, inputs in enumerate(dataloader):
++            if self.args.mkldnn:
++                inputs = {key:value.to(ipex.DEVICE) for key,value in inputs.items()}
++            if self.args.profiling:
++                with torch.autograd.profiler.profile(use_cuda=False) as prof:
++                    loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
++            else:
++                tic = time.time()
++                loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
++                toc = time.time()
+ 
+-        for inputs in dataloader:
+-            loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
+             batch_size = inputs[list(inputs.keys())[0]].shape[0]
++
++            if index > self.args.num_warmup_iters:
++                total_time += toc - tic
++                total_data += batch_size
++
+             if loss is not None:
+                 eval_losses.extend([loss] * batch_size)
+             if logits is not None:
+@@ -1269,6 +1292,12 @@ class Trainer:
+                 label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
+             self.control = self.callback_handler.on_prediction_step(self.args, self.state, self.control)
+ 
++        if self.args.profiling:
++            print(prof.key_averages().table(sort_by="self_cpu_time_total"))
++        
++        print(" time cost %s\n total samples %s \n inference latency: %ss\n inference Throughput: %s images/s\n " 
++                %(total_time, total_data, total_time /total_data, total_data / total_time))
++
+         if self.args.past_index and hasattr(self, "_past"):
+             # Clean the state at the end of the evaluation loop
+             delattr(self, "_past")
+diff --git a/src/transformers/training_args.py b/src/transformers/training_args.py
+index 9359a9f..5361153 100644
+--- a/src/transformers/training_args.py
++++ b/src/transformers/training_args.py
+@@ -320,6 +320,13 @@ class TrainingArguments:
+     greater_is_better: Optional[bool] = field(
+         default=None, metadata={"help": "Whether the `metric_for_best_model` should be maximized or not."}
+     )
++    num_warmup_iters: int = field(default=10, metadata={"help": "Warmup steps for evaluation benchmarking."})
++    profiling: bool = field(default=False, metadata={"help": "Doing profiling on cpu."})
++    mkldnn: bool = field(default=False, metadata={"help": "Use Intel IPEX."})
++    jit: bool = field(default=False, metadata={"help": "Use jit optimize to do optimization."})
++    profiling: bool = field(default=False, metadata={"help": "Do profiling."})
++
++
+ 
+     def __post_init__(self):
+         if self.disable_tqdm is None:

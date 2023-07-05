@@ -1,0 +1,54 @@
+diff --git a/fairseq_cli/generate.py b/fairseq_cli/generate.py
+index 61c41e35..7698603b 100644
+--- a/fairseq_cli/generate.py
++++ b/fairseq_cli/generate.py
+@@ -13,6 +13,7 @@ import os
+ import sys
+ 
+ import torch
++import intel_pytorch_extension as ipex
+ 
+ from fairseq import bleu, checkpoint_utils, options, tasks, utils
+ from fairseq.logging import progress_bar
+@@ -71,6 +72,12 @@ def _main(args, output_file):
+         task=task,
+     )
+ 
++    def fw_pre_hook(layer, input):
++        inputs = []
++        for i in input:
++            inputs.append(i.to(ipex.DEVICE))
++        return tuple(inputs)
++
+     # Optimize ensemble for generation
+     for model in models:
+         model.make_generation_fast_(
+@@ -81,6 +88,11 @@ def _main(args, output_file):
+             model.half()
+         if use_cuda:
+             model.cuda()
++        if args.ipex:
++            ipex.core.enable_auto_dnnl()
++            ipex.core.enable_jit_opt()
++            model.to(ipex.DEVICE)
++            model.register_forward_pre_hook(fw_pre_hook)
+ 
+     # Load alignment dictionary for unknown word replacement
+     # (None if no unknown word replacement, empty if no path to align dictionary)
+@@ -222,6 +234,8 @@ def _main(args, output_file):
+     logger.info('NOTE: hypothesis and token scores are output in base 2')
+     logger.info('Translated {} sentences ({} tokens) in {:.1f}s ({:.2f} sentences/s, {:.2f} tokens/s)'.format(
+         num_sentences, gen_timer.n, gen_timer.sum, num_sentences / gen_timer.sum, 1. / gen_timer.avg))
++    logger.info('Throughput: ({:.2f} sentences/s'.format(num_sentences / gen_timer.sum))
++
+     if has_target:
+         logger.info('Generate {} with beam={}: {}'.format(args.gen_subset, args.beam, scorer.result_string()))
+ 
+@@ -230,6 +244,7 @@ def _main(args, output_file):
+ 
+ def cli_main():
+     parser = options.get_generation_parser()
++    parser.add_argument('--ipex', action='store_true', help='use ipex')
+     args = options.parse_args_and_arch(parser)
+     main(args)
+ 

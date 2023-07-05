@@ -1,0 +1,84 @@
+diff --git a/examples/run_generation.py b/examples/run_generation.py
+index 3f90ee5..49b7aec 100644
+--- a/examples/run_generation.py
++++ b/examples/run_generation.py
+@@ -20,6 +20,7 @@
+ 
+ import argparse
+ import logging
++import time
+ 
+ import numpy as np
+ import torch
+@@ -186,6 +187,10 @@ def main():
+     parser.add_argument("--seed", type=int, default=42, help="random seed for initialization")
+     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
+     parser.add_argument("--num_return_sequences", type=int, default=1, help="The number of samples to generate.")
++    parser.add_argument("--num_warmup_iter", type=int, default=50, help="The number warmup, default is 50.")
++    parser.add_argument("--benchmark_iter", type=int, default=500, help="The number iters of benchmark, default is 500.")
++    parser.add_argument("--mkldnn", action="store_true", help="Use Intel IPEX to optimize.")
++    parser.add_argument("--jit", action="store_true", help="Use jit optimize to do optimization.")
+     args = parser.parse_args()
+ 
+     args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+@@ -221,6 +226,29 @@ def main():
+         encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
+     encoded_prompt = encoded_prompt.to(args.device)
+ 
++    if args.mkldnn:
++        # Import Extension
++        print("Now use Intel IPEX to optimize model.")
++        import intel_pytorch_extension as ipex
++        model = model.to(ipex.DEVICE)
++        encoded_prompt = encoded_prompt.to(ipex.DEVICE)
++        if args.jit:
++            ipex.core.enable_jit_opt()
++            model = torch.jit.script(model)
++
++    # warmup generate
++    _ = model.generate(
++        input_ids=encoded_prompt,
++        max_length=args.length + len(encoded_prompt[0]),
++        temperature=args.temperature,
++        top_k=args.k,
++        top_p=args.p,
++        repetition_penalty=args.repetition_penalty,
++        do_sample=True,
++        num_return_sequences=args.num_warmup_iter,
++    )
++    tic  = time.time()
++    # inference benchmark
+     output_sequences = model.generate(
+         input_ids=encoded_prompt,
+         max_length=args.length + len(encoded_prompt[0]),
+@@ -229,8 +257,11 @@ def main():
+         top_p=args.p,
+         repetition_penalty=args.repetition_penalty,
+         do_sample=True,
+-        num_return_sequences=args.num_return_sequences,
++        num_return_sequences=args.benchmark_iter,
+     )
++    total_time = time.time() - tic
++    print(" time cost %s\n inference Latency: %s s\n inference Throughput: %s samples/s\n "
++          %(total_time, total_time / args.num_return_sequences, args.num_return_sequences / total_time))
+ 
+     # Remove the batch dimension when returning multiple sequences
+     if len(output_sequences.shape) > 2:
+@@ -239,7 +270,7 @@ def main():
+     generated_sequences = []
+ 
+     for generated_sequence_idx, generated_sequence in enumerate(output_sequences):
+-        print("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
++        #print("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
+         generated_sequence = generated_sequence.tolist()
+ 
+         # Decode text
+@@ -254,7 +285,7 @@ def main():
+         )
+ 
+         generated_sequences.append(total_sequence)
+-        print(total_sequence)
++        #print(total_sequence)
+ 
+     return generated_sequences
+ 

@@ -1,0 +1,67 @@
+diff --git a/tests/perf_test.py b/tests/perf_test.py
+index 363c569..b76b177 100644
+--- a/tests/perf_test.py
++++ b/tests/perf_test.py
+@@ -4,15 +4,33 @@ from torchvision import datasets, transforms
+ from torch.utils.data import DataLoader, RandomSampler
+ from tqdm import tqdm
+ import time
++import argparse
+ 
+ 
+ def main():
+-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--ipex", action='store_true', help='use mkldnn')
++    parser.add_argument('--precision', type=str, default="float32",
++                        help='precision, float32, bfloat16')
++    # parser.add_argument('--jit', action='store_true', help='Use Pytorch jit to get boost.')
++    parser.add_argument("--batch-size", "-b", default=32, type=int)
++    args = parser.parse_args()
++    print(args)
++
++    if args.ipex:
++       import intel_pytorch_extension as ipex
++       print('Running with IPEX...')
++       if args.precision == 'bfloat16':
++           ipex.enable_auto_mixed_precision(mixed_dtype=torch.bfloat16)
++           print('Running with bfloat16...')
++       device = ipex.DEVICE
++    else:
++       device = 'cuda' if torch.cuda.is_available() else 'cpu'
+     print(f'Running on device "{device}"')
+ 
+     mtcnn = MTCNN(device=device)
+ 
+-    batch_size = 32
++    batch_size = args.batch_size
+ 
+     # Generate data loader
+     ds = datasets.ImageFolder(
+@@ -21,18 +39,25 @@ def main():
+     )
+     dl = DataLoader(
+         dataset=ds,
+-        num_workers=4,
++        num_workers=1,
+         collate_fn=training.collate_pil,
+         batch_size=batch_size,
+         sampler=RandomSampler(ds, replacement=True, num_samples=960),
+     )
+ 
++    # if args.jit:
++    #     # mtcnn = torch.jit.script(mtcnn)
++    #     for x, _ in dl:
++    #         mtcnn = torch.jit.trace(mtcnn, x)
++    #         break
++
+     start = time.time()
+     faces = []
+     for x, _ in tqdm(dl):
+         faces.extend(mtcnn(x))
+     elapsed = time.time() - start
+     print(f'Elapsed: {elapsed} | EPS: {len(dl) * batch_size / elapsed}')
++    print('Throughput: {}'.format(len(dl) * batch_size / elapsed))
+ 
+ 
+ if __name__ == '__main__':

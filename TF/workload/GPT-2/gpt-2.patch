@@ -1,0 +1,153 @@
+diff --git a/src/generate_unconditional_samples.py b/src/generate_unconditional_samples.py
+index eaf9a63..f5beeeb 100755
+--- a/src/generate_unconditional_samples.py
++++ b/src/generate_unconditional_samples.py
+@@ -3,15 +3,22 @@
+ import fire
+ import json
+ import os
++import time
+ import numpy as np
+-import tensorflow as tf
+-
+ import model, sample, encoder
++try:
++    import tensorflow.compat.v1 as tf
++    print("TensorFlow 2.x.")
++except:
++    import tensorflow as tf
++    print("TensorFlow 1.x")
+
+ def sample_model(
+     model_name='124M',
+     seed=None,
+-    nsamples=0,
++    nsamples=10,
++    warmup=3,
++    precision='float32',
+     batch_size=1,
+     length=None,
+     temperature=1,
+@@ -27,6 +34,8 @@ def sample_model(
+     :nsamples=0 : Number of samples to return, if 0, continues to
+      generate samples indefinately.
+     :batch_size=1 : Number of batches (only affects speed/memory).
++    :warmup=3 : precision.
++    :precision=float32 : precision.
+     :length=None : Number of tokens in generated text, if None (default), is
+      determined by model hyperparameters
+     :temperature=1 : Float value controlling randomness in boltzmann
+@@ -50,8 +59,16 @@ def sample_model(
+         length = hparams.n_ctx
+     elif length > hparams.n_ctx:
+         raise ValueError("Can't get samples longer than window size: %s" % hparams.n_ctx)
++    #
++    config = tf.ConfigProto(allow_soft_placement=True)
++    if precision == 'bfloat16':
++        try:
++            from tensorflow.core.protobuf import rewriter_config_pb2
++            config.graph_options.rewrite_options.auto_mixed_precision_mkl = rewriter_config_pb2.RewriterConfig.ON
++        except:
++            print("WARNING: Auto mixed precision got FAILED.")
+
+-    with tf.Session(graph=tf.Graph()) as sess:
++    with tf.Session(config=config, graph=tf.Graph()) as sess:
+         np.random.seed(seed)
+         tf.set_random_seed(seed)
+
+@@ -67,13 +84,27 @@ def sample_model(
+         saver.restore(sess, ckpt)
+
+         generated = 0
++        tic = 0
++        total_word = 0
+         while nsamples == 0 or generated < nsamples:
++            if generated == warmup:
++                tic = time.time()
++
+             out = sess.run(output)
++            generated += batch_size
++
+             for i in range(batch_size):
+-                generated += batch_size
+                 text = enc.decode(out[i])
+-                print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
+-                print(text)
++                if generated >= warmup:
++                    total_word += len(text.split())
++                # print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
++                # print("Total words for now is: %f" % total_word )
++                # print("Throughput for now is: %f" % (total_word / (time.time() - tic)))
++                # print(text)
++
++        toc = time.time()
++        print("Total words is: %f" % total_word )
++        print("Throughput: %f" % (total_word / (toc - tic)))
+
+ if __name__ == '__main__':
+     fire.Fire(sample_model)
+diff --git a/src/model.py b/src/model.py
+index 230b83c..f15e9c9 100644
+--- a/src/model.py
++++ b/src/model.py
+@@ -1,5 +1,9 @@
+ import numpy as np
+-import tensorflow as tf
++try:
++    import tensorflow.compat.v1 as tf
++except ImportError:
++    import tensorflow as tf
++# from hparams import HParams
+ from tensorflow.contrib.training import HParams
+
+ def default_hparams():
+@@ -28,7 +32,7 @@ def gelu(x):
+ def norm(x, scope, *, axis=-1, epsilon=1e-5):
+     """Normalize to mean = 0, std = 1, then do a diagonal affine transform."""
+     with tf.variable_scope(scope):
+-        n_state = x.shape[-1].value
++        n_state = x.shape[-1]
+         g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))
+         b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))
+         u = tf.reduce_mean(x, axis=axis, keepdims=True)
+@@ -91,7 +95,7 @@ def attn(x, scope, n_state, *, past, hparams):
+     def multihead_attn(q, k, v):
+         # q, k, v have shape [batch, heads, sequence, features]
+         w = tf.matmul(q, k, transpose_b=True)
+-        w = w * tf.rsqrt(tf.cast(v.shape[-1].value, w.dtype))
++        w = w * tf.rsqrt(tf.cast(v.shape[-1], w.dtype))
+
+         w = mask_attn_weights(w)
+         w = softmax(w)
+@@ -114,7 +118,7 @@ def attn(x, scope, n_state, *, past, hparams):
+
+ def mlp(x, scope, n_state, *, hparams):
+     with tf.variable_scope(scope):
+-        nx = x.shape[-1].value
++        nx = x.shape[-1]
+         h = gelu(conv1d(x, 'c_fc', n_state))
+         h2 = conv1d(h, 'c_proj', nx)
+         return h2
+@@ -122,7 +126,7 @@ def mlp(x, scope, n_state, *, hparams):
+
+ def block(x, scope, *, past, hparams):
+     with tf.variable_scope(scope):
+-        nx = x.shape[-1].value
++        nx = x.shape[-1]
+         a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
+         x = x + a
+         m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
+diff --git a/src/sample.py b/src/sample.py
+index c90ed28..9232fcc 100644
+--- a/src/sample.py
++++ b/src/sample.py
+@@ -1,4 +1,8 @@
+-import tensorflow as tf
++
++try:
++    import tensorflow.compat.v1 as tf
++except ImportError:
++    import tensorflow as tf
+
+ import model
+

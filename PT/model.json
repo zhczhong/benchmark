@@ -1,0 +1,199 @@
+{
+   "3D-UNet": {
+    "model_path": "workload/3D-UNet",
+    "batch_size": 1
+   },
+   "A3C": {
+    "model_path": "workload/A3C",
+    "batch_size": 1
+   },
+   "CBAM": {
+    "model_path": "workload/CBAM",
+    "batch_size": 1
+   },
+   "CRNN": {
+    "model_path": "workload/CRNN",
+    "batch_size": 1
+   },
+   "CenterNet": {
+    "model_path": "workload/CenterNet",
+    "batch_size": 1
+   },
+   "Convolution-Seq2Seq": {
+    "model_path": "workload/Convseq2seq",
+    "batch_size": 1
+   },
+   "Facenet": {
+    "model_path": "workload/FaceNet-Pytorch",
+    "batch_size": 1
+   },
+   "GCN": {
+    "model_path": "workload/GCN",
+    "batch_size": 1
+   },
+   "GPT-2": {
+    "model_path": "workload/GPT-2",
+    "batch_size": 1
+   },
+   "HBONet": {
+    "model_path": "workload/HBONet",
+    "batch_size": 1
+   },
+   "MGANet": {
+    "model_path": "workload/MGANet",
+    "batch_size": 1
+   },
+   "RNN-T": {
+    "model_path": "workload/RNN-T_inf",
+    "batch_size": 1
+   },
+   "resnest50": {
+    "model_path": "workload/ResNeSt",
+    "batch_size": 1
+   },
+   "ResNext3D": {
+    "model_path": "workload/Resnext3d",
+    "batch_size": 1
+   },
+   "RetinaNet": {
+    "model_path": "workload/RetinaNet",
+    "batch_size": 1
+   },
+   "ssd300": {
+    "model_path": "workload/SSD300",
+    "batch_size": 1
+   },
+   "TTS": {
+    "model_path": "workload/TTS",
+    "batch_size": 1
+   },
+   "TransformerXL": {
+    "model_path": "workload/Transformer-xl",
+    "batch_size": 1
+   },
+   "Transformer-LT": {
+    "model_path": "workload/TransformerLt",
+    "batch_size": 1
+   },
+   "VAE": {
+    "model_path": "workload/VAE",
+    "batch_size": 1
+   },
+   "Yolo2": {
+    "model_path": "workload/YOLOV2",
+    "batch_size": 1
+   },
+   "Yolo3": {
+    "model_path": "workload/YOLOV3",
+    "batch_size": 1
+   },
+   "ACGAN": {
+    "model_path": "workload/acgan",
+    "batch_size": 1
+   },
+   "BEGAN": {
+    "model_path": "workload/began",
+    "batch_size": 1
+   },
+   "BERT-LARGE": {
+    "model_path": "workload/bert_large",
+    "batch_size": 1
+   },
+   "CGAN": {
+    "model_path": "workload/cgan",
+    "batch_size": 1
+   },
+   "DCGAN": {
+    "model_path": "workload/dcgan",
+    "batch_size": 1
+   },
+   "Deit-B": {
+    "model_path": "workload/deit",
+    "batch_size": 1
+   },
+   "EBGAN": {
+    "model_path": "workload/ebgan",
+    "batch_size": 1
+   },
+   "gen-efficientnet-pytorch": {
+    "model_path": "workload/gen-efficientnet-pytorch",
+    "batch_size": 1
+   },
+   "SqueezeNet": {
+    "model_path": "workload/SqueezeNet",
+    "batch_size": 1
+   },
+   "EfficientNet": {
+    "model_path": "workload/EfficientNet",
+    "batch_size": 1
+   },
+   "huggingface_models": {
+    "model_path": "workload/huggingface_models",
+    "batch_size": 1
+   },
+   "maskrcnn": {
+    "model_path": "workload/maskrcnn",
+    "batch_size": 1
+   },
+   "midasnet": {
+    "model_path": "workload/midasnet",
+    "batch_size": 1
+   },
+   "pretrained-models": {
+    "model_path": "workload/pretrained-models",
+    "batch_size": 1
+   },
+   "U-Net": {
+    "model_path": "workload/pytorch-unet",
+    "batch_size": 1
+   },
+   "Reformer": {
+    "model_path": "workload/reformer",
+    "batch_size": 1
+   },
+   "SGAN": {
+    "model_path": "workload/sgan",
+    "batch_size": 1
+   },
+   "SRGAN": {
+    "model_path": "workload/srgan",
+    "batch_size": 1
+   },
+   "SSD-Mobilenet-V1": {
+    "model_path": "workload/ssd-mobilenetv1",
+    "batch_size": 1
+   },
+   "SSD-Mobilenet-V2": {
+    "model_path": "workload/ssd-mobilenetv2",
+    "batch_size": 1
+   },
+   "SSD-VGG16": {
+    "model_path": "workload/ssd-vgg16",
+    "batch_size": 1
+   },
+   "VNET": {
+    "model_path": "workload/vnet",
+    "batch_size": 1
+   },
+   "WGAN": {
+    "model_path": "workload/wgan",
+    "batch_size": 1
+   },
+   "W&D": {
+    "model_path": "workload/wide_deep",
+    "batch_size": 1
+   },
+   "NCF":{
+    "model_path":"workload/NCF",
+    "batch_size": 1
+   },
+   "GNMT": {
+    "model_path": "workload/GNMT",
+    "batch_size": 1
+     },
+   "DLRM":{
+    "model_path":"workload/DLRM",
+    "batch_size": 1
+   }
+  }
+  
