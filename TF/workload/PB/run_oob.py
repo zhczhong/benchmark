@@ -175,55 +175,6 @@ def get_code_name():
     return name
 
 
-# def run(args):
-#     cpu_cores = get_cpu_cores()
-#     datatypes = ["f32", "bfloat16", "int8"
-#                  ] if args.data_type == "all" else [args.data_type]
-#     scenarios = ["realtime", "throughput"
-#                  ] if args.scenario == "all" else [args.scenario]
-#     core_bs_scenario_map = {
-#         "realtime": (4, 1),
-#         "throughput": (cpu_cores, cpu_cores * 2)
-#     }
-
-#     target_model = args.model
-#     model_list = [target_model
-#                   ] if target_model in oob_model_list else oob_model_list
-#     target_model = "all" if target_model in oob_model_list else args.model
-
-#     for scenario in scenarios:
-#         core_per_instance_bs_pair = core_bs_scenario_map[scenario]
-#         core_per_instance = core_per_instance_bs_pair[0]
-#         bs = core_per_instance_bs_pair[1]
-#         for is_not_compiler_backend in ["0", "1"]:
-#             os.environ[
-#                 "_DNNL_DISABLE_COMPILER_BACKEND"] = is_not_compiler_backend
-#             for dtype in datatypes:
-#                 for model_name in model_list:
-#                     if target_model == "all" or target_model == model_name:
-#                         bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=1 --cores_per_instance={core_per_instance} --num_warmup=20 --num_iter=200 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
-#                             batch_size=bs,
-#                             model_name=model_name,
-#                             data_type=dtype,
-#                             core_per_instance=core_per_instance)
-#                         if len(args.dump_graph) > 0:
-#                             path_name = args.dump_graph + \
-#                                 "/{dtype}/{model_name}/bs{bs}/".format(dtype=dtype,
-#                                     model_name=model_name, bs=bs)
-#                             if not os.path.exists(path_name):
-#                                 os.makedirs(path_name)
-#                             os.environ[
-#                                 "ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_DUMP_GRAPH_JSON"] = path_name
-#                         with subprocess.Popen(bench_cmd.split(" "),
-#                                               stdout=subprocess.PIPE,
-#                                               stderr=subprocess.PIPE,
-#                                               bufsize=1,
-#                                               universal_newlines=True) as p:
-#                             print(bench_cmd)
-#                             for out_line in p.stdout:
-#                                 print(out_line)
-
-
 def run(args):
     cpu_cores = get_cpu_cores()
     datatypes = ["f32", "bfloat16", "int8"
@@ -239,36 +190,85 @@ def run(args):
     model_list = [target_model
                   ] if target_model in oob_model_list else oob_model_list
     target_model = "all" if target_model in oob_model_list else args.model
-    f = open("run_oob_cmd.sh", "w")
+
     for scenario in scenarios:
         core_per_instance_bs_pair = core_bs_scenario_map[scenario]
         core_per_instance = core_per_instance_bs_pair[0]
         bs = core_per_instance_bs_pair[1]
         for is_not_compiler_backend in ["0", "1"]:
+            os.environ[
+                "_DNNL_DISABLE_COMPILER_BACKEND"] = is_not_compiler_backend
             for dtype in datatypes:
                 for model_name in model_list:
                     if target_model == "all" or target_model == model_name:
-                        bench_cmd = "./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=1 --cores_per_instance={core_per_instance} --num_warmup=20 --num_iter=200 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
+                        bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=1 --cores_per_instance={core_per_instance} --num_warmup=20 --num_iter=200 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
                             batch_size=bs,
                             model_name=model_name,
                             data_type=dtype,
                             core_per_instance=core_per_instance)
-                        path_name = "\"\""
                         if len(args.dump_graph) > 0:
                             path_name = args.dump_graph + \
-                                "/{dtype}/{model_source}/{model_name}/bs{bs}/".format(dtype=dtype, model_source=model_source,
+                                "/{dtype}/{model_name}/bs{bs}/".format(dtype=dtype,
                                     model_name=model_name, bs=bs)
                             if not os.path.exists(path_name):
                                 os.makedirs(path_name)
+                            os.environ[
+                                "ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_DUMP_GRAPH_JSON"] = path_name
+                        with subprocess.Popen(bench_cmd.split(" "),
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.PIPE,
+                                              bufsize=1,
+                                              universal_newlines=True) as p:
+                            print(bench_cmd)
+                            for out_line in p.stdout:
+                                print(out_line)
 
-                        env_str = "ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_DUMP_GRAPH_JSON={dump_path} KMP_AFFINITY=\"granularity=fine,compact,1,0\" KMP_BLOCKTIME=1 DNNL_MAX_CPU_ISA={ISA} MALLOC_CONF=\"oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000\" _DNNL_FORCE_MAX_PARTITION_POLICY=1 _DNNL_DISABLE_COMPILER_BACKEND={backend} ".format(
-                            dump_path=path_name,
-                            ISA="AVX512_CORE_AMX"
-                            if is_running_on_amx() else "AVX512_CORE_VNNI",
-                            backend=is_not_compiler_backend)
-                        f.write(env_str + bench_cmd)
-                        f.write("\n")
-    f.close()
+
+# def run(args):
+#     cpu_cores = get_cpu_cores()
+#     datatypes = ["f32", "bfloat16", "int8"
+#                  ] if args.data_type == "all" else [args.data_type]
+#     scenarios = ["realtime", "throughput"
+#                  ] if args.scenario == "all" else [args.scenario]
+#     core_bs_scenario_map = {
+#         "realtime": (4, 1),
+#         "throughput": (cpu_cores, cpu_cores * 2)
+#     }
+
+#     target_model = args.model
+#     model_list = [target_model
+#                   ] if target_model in oob_model_list else oob_model_list
+#     target_model = "all" if target_model in oob_model_list else args.model
+#     f = open("run_oob_cmd.sh", "w")
+#     for scenario in scenarios:
+#         core_per_instance_bs_pair = core_bs_scenario_map[scenario]
+#         core_per_instance = core_per_instance_bs_pair[0]
+#         bs = core_per_instance_bs_pair[1]
+#         for is_not_compiler_backend in ["0", "1"]:
+#             for dtype in datatypes:
+#                 for model_name in model_list:
+#                     if target_model == "all" or target_model == model_name:
+#                         bench_cmd = "./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=1 --cores_per_instance={core_per_instance} --num_warmup=20 --num_iter=200 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
+#                             batch_size=bs,
+#                             model_name=model_name,
+#                             data_type=dtype,
+#                             core_per_instance=core_per_instance)
+#                         path_name = "\"\""
+#                         if len(args.dump_graph) > 0:
+#                             path_name = args.dump_graph + \
+#                                 "/{dtype}/{model_source}/{model_name}/bs{bs}/".format(dtype=dtype, model_source=model_source,
+#                                     model_name=model_name, bs=bs)
+#                             if not os.path.exists(path_name):
+#                                 os.makedirs(path_name)
+
+#                         env_str = "ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_DUMP_GRAPH_JSON={dump_path} KMP_AFFINITY=\"granularity=fine,compact,1,0\" KMP_BLOCKTIME=1 DNNL_MAX_CPU_ISA={ISA} MALLOC_CONF=\"oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000\" _DNNL_FORCE_MAX_PARTITION_POLICY=1 _DNNL_DISABLE_COMPILER_BACKEND={backend} ".format(
+#                             dump_path=path_name,
+#                             ISA="AVX512_CORE_AMX"
+#                             if is_running_on_amx() else "AVX512_CORE_VNNI",
+#                             backend=is_not_compiler_backend)
+#                         f.write(env_str + bench_cmd)
+#                         f.write("\n")
+#     f.close()
 
 
 def main():
