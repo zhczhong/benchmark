@@ -195,13 +195,33 @@ def run(args):
         core_per_instance_bs_pair = core_bs_scenario_map[scenario]
         core_per_instance = core_per_instance_bs_pair[0]
         bs = core_per_instance_bs_pair[1]
-        for is_not_compiler_backend in ["0", "1"]:
-            os.environ[
-                "_DNNL_DISABLE_COMPILER_BACKEND"] = is_not_compiler_backend
+        for option in [1, 2, 3]:
+            if option == 1:
+                # GC Generic Paattern
+                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
+                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "1"
+                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "1"
+                os.environ["_DNNL_GC_GENERIC_MHA"] = "1"
+                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
+            elif option == 2:
+                # GC Max partition
+                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
+                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "0"
+                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "0"
+                os.environ["_DNNL_GC_GENERIC_MHA"] = "0"
+                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
+            else:
+                # DNNL
+                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "1"
+                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "0"
+                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "0"
+                os.environ["_DNNL_GC_GENERIC_MHA"] = "0"
+                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
+
             for dtype in datatypes:
                 for model_name in model_list:
                     if target_model == "all" or target_model == model_name:
-                        bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=1 --cores_per_instance={core_per_instance} --num_warmup=20 --num_iter=200 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
+                        bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=0 --cores_per_instance={core_per_instance} --num_warmup=10 --num_iter=50 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
                             batch_size=bs,
                             model_name=model_name,
                             data_type=dtype,
@@ -299,7 +319,6 @@ def main():
         "DNNL_MAX_CPU_ISA"] = "AVX512_CORE_AMX" if is_amx else "AVX512_CORE_VNNI"
     os.environ[
         "MALLOC_CONF"] = "oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
-    os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
     run(args)
 
 
