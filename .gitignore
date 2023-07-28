@@ -17,3 +17,5 @@ te.json
 logs/
 scripts/scribe.py
 .userbenchmark/
+graph*.json
+Intel_*.csv
