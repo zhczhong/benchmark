@@ -72,6 +72,16 @@ vision_model_list = {
     "group_conv": group_conv_model_list,
 }
 
+full_source_list = (["torchvision", "timm", "torchbench"])
+full_model_list = list()
+full_model_list.extend(torch_vision_classification_model_list)
+full_model_list.extend(timm_vision_model_list)
+full_model_list.extend(torch_bench_vision_model_list)
+full_model_list.extend(full_source_list)
+full_model_list.append("all")
+
+supported_datatypes = ["f32", "bfloat16", "int8", "all"]
+supported_scenarios = ["realtime", "throughput", "all"]
 
 full_model_list = list()
 full_model_list.extend(torch_vision_classification_model_list)
