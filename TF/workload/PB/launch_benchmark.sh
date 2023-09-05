@@ -10,12 +10,17 @@ export ITEX_LAYOUT_OPT=0
 # export _ITEX_ONEDNN_GRAPH_ALL_TYPE=1    # 1 for enable all LLGA partition rewrite, 0 for rewriting only int8 type kernels
 export _ITEX_ONEDNN_GRAPH_COMPILER_BACKEND=1    # 1 for enabling compiler backend, 0 for disabling compiler backend
 export _ITEX_ONEDNN_GRAPH_DNNL_BACKEND=1    # 1 for enabling dnnl backend, 0 for disabling dnnl backend
+export ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_VERBOSE=2
+# export ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_MICRO_KERNEL_OPTIM=2
+export ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_EXECUTION_VERBOSE=1
+# export ONEDNN_EXPERIMENTAL_GRAPH_COMPILER_KERNEL_TRACE=stderr
 # export ITEX_TF_CONSTANT_FOLDING=0
 export TF_ONEDNN_USE_SYSTEM_ALLOCATOR=1
 export KMP_AFFINITY=granularity=fine,verbose,compact,1,0
 export KMP_BLOCKTIME=1
 export KMP_SETTINGS=1
-export LD_PRELOAD=${LD_PRELOAD}:/home/zhicong/ipex_env/miniconda/envs/itex_env/lib/libjemalloc.so:/home/zhicong/ipex_env/miniconda/envs/itex_env/lib/libiomp5.so
+# export LD_PRELOAD=${LD_PRELOAD}:/home/zhicong/ipex_env/miniconda/envs/itex_env/lib/libjemalloc.so:/home/zhicong/ipex_env/miniconda/envs/itex_env/lib/libiomp5.so
+export LD_PRELOAD=${LD_PRELOAD}:/home/haixin/anaconda3/envs/hhx/lib/libjemalloc.so:/home/haixin/anaconda3/envs/hhx/lib/libiomp5.so
 
 # tensorflow models pb directly.
 function main {
@@ -193,6 +198,7 @@ function generate_core {
                 --batch_size ${batch_size} \
                 --num_warmup ${num_warmup} \
                 --num_iter ${num_iter} \
+		--check_correctness \
                 ${extra_params} \
                 ${addtion_options} \
         > ${log_file} 2>&1 &  \n" |tee -a ${excute_cmd_file}
@@ -243,6 +249,25 @@ function generate_core {
                 sum = avg * i;
             }
             printf("%.2f", sum);
+        }
+    ')
+    correctness_check=$(grep 'CorrectnessCheck:' ${log_dir}/rcpi* |sed -e 's/.*CorrectnessCheck: //;s/out of //;s/ iter passed//g' |awk -v i=${instance} '
+        BEGIN {
+            total = 0;
+	    pass = 0;
+        }
+	{
+            total = total + $2;
+	    pass = pass + $1;
+	}
+	END {
+            if (total == 0) {
+                printf("-")
+	    } else if (total != pass) {
+                printf("failed")
+            } else {
+                printf("passed")
+            }
         }
     ')
 }

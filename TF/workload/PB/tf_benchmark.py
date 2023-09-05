@@ -6,7 +6,9 @@ import argparse
 import math
 import yaml
 import numpy as np
+import torch
 
+from contextlib import nullcontext
 from tensorflow.python.client import timeline
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.core.protobuf import rewriter_config_pb2
@@ -92,6 +94,9 @@ def create_tf_config(args):
 
 def run_benchmark(model_details, args, find_graph_def):
     tf_config = create_tf_config(args)
+    # disable onednn graph as correctness reference
+    tf_config_ref = create_tf_config(args)
+    # tf_config_ref.graph_options.onednn_graph = 0 
     graph = initialize_graph(model_details, args, find_graph_def)
     run_options = tf_v1.RunOptions(trace_level=tf_v1.RunOptions.FULL_TRACE)
     run_metadata = tf_v1.RunMetadata()
@@ -102,25 +107,53 @@ def run_benchmark(model_details, args, find_graph_def):
         out_graph_file = os.path.join(model_dir, 'runtime_graph.pb')
         write_graph(graph.as_graph_def(), out_graph_file)
         print("********** save runtime graph at {}".format(out_graph_file))
- 
-    with tf_v1.Session(config=tf_config, graph=graph) as sess:
+
+    print("========= start running", flush=True)
+    with tf_v1.Session(config=tf_config, graph=graph) as sess, tf_v1.Session(config=tf_config_ref, graph=graph) if args.check_correctness else nullcontext() as sess_ref:
         output_dict = {out_name: graph.get_tensor_by_name("g/" + out_name + ":0")
                        for out_name in model_details['output']}
 
         sess.run(tf_v1.global_variables_initializer())
+        if args.check_correctness:
+            sess_ref.run(tf_v1.global_variables_initializer())
 
         total_time = 0.0
         reps_done = 0
+        reps_correctness_passed = 0
         for rep in range(args.num_iter):
             # sess run
             start = time.time()
+            run_result = []
             if args.profile:
-                _ = sess.run(output_dict, options=run_options, run_metadata=run_metadata)
+                run_result = sess.run(output_dict, options=run_options, run_metadata=run_metadata)
             else:
-                _ = sess.run(output_dict)
+                print("============================ run model with llga enabled", flush=True)
+                run_result = sess.run(output_dict) 
             end = time.time()
             delta = end - start
-            print("Iteration: {}, inference time: {} sec".format(rep, delta), flush=True)
+            print("Iteration: {}, inference time: {} sec".format(rep, delta))
+            
+            if args.check_correctness:
+                print("============================ run model with llga disabled as reference", flush=True)
+
+                import intel_extension_for_tensorflow as itex
+                graph_options = itex.GraphOptions()
+                graph_options.onednn_graph = itex.OFF
+                config = itex.ConfigProto(graph_options=graph_options)
+                itex.set_config(config)
+                
+                ref_result = sess_ref.run(output_dict)
+            
+                graph_options.onednn_graph = itex.ON
+                config = itex.ConfigProto(graph_options=graph_options)
+                itex.set_config(config)
+                 
+                result = same(ref_result, run_result)
+                if result:
+                    print("Iteration: {} check correctness PASS".format(rep), flush=True)
+                    reps_correctness_passed += 1
+                else:
+                    print("Iteration: {} check correctness FAIL".format(rep), flush=True)
 
             if rep >= args.num_warmup and rep < (args.num_iter - args.num_warmup):
                 total_time += delta
@@ -143,9 +176,42 @@ def run_benchmark(model_details, args, find_graph_def):
         avg_time = total_time / reps_done
         latency = avg_time * 1000
         throughput = 1.0 / avg_time * args.batch_size
-        print('Batch size = %d' % args.batch_size)
+        print('Batch size = %d' % args.batch_size, flush=True)
         print("Latency: {:.3f} ms".format(latency))
         print("Throughput: {:.2f} fps".format(throughput))
+        if args.check_correctness:
+            print("CorrectnessCheck: {} out of {} iter passed".format(reps_correctness_passed, args.num_iter))
+
+def same(ref, dst):
+    print(ref)
+    print(dst)
+    ref_keys = list(ref.keys())
+    dst_keys = list(dst.keys())
+    ref_keys.sort()
+    dst_keys.sort()
+    print(ref_keys)
+    print(dst_keys)
+    if len(ref_keys) != len(dst_keys):
+        return False
+    for i in range(len(ref_keys)):
+        if ref_keys[i] != dst_keys[i]:
+            return False
+    for key in ref_keys:
+        ref_val = torch.from_numpy(ref.get(key))
+        dst_val = torch.from_numpy(dst.get(key))
+        ref_val = torch.flatten(ref_val)
+        dst_val = torch.flatten(dst_val)
+        if torch.equal(ref_val, dst_val):
+            print("Output {} correctness check all equal".format(key))
+            continue
+        else:
+            ref_val = ref_val.to(torch.float32)
+            dst_val = dst_val.to(torch.float32)
+            cos_sim = torch.nn.functional.cosine_similarity(ref_val, dst_val, dim=0, eps=1e-6)
+            print("Output {} correctness check cos_sim: {}".format(key, cos_sim))
+            if cos_sim < 0.99:
+                return False
+    return True
 
 def _write_inputs_outputs_to_yaml(yaml_path, output_yaml_path, inputs, outputs):
     # deal with the inputs/outputs at yaml
@@ -238,14 +304,14 @@ if __name__ == "__main__":
     parser.add_argument("--benchmark", action='store_true', help="Benchmark.")
     parser.add_argument("--use_nc", action='store_true', help="Find input/output via neural_compressor.")
     parser.add_argument("--output_name", nargs='*', help="Specify output for neural_compressor ckpt.")
+    parser.add_argument("--check_correctness", action='store_true', help="to do correctness check")
     # tuning
     parser.add_argument("--yaml", type=str, help="config yaml file of neural_compressor.", default='./config.yaml')
     parser.add_argument("--tune", action='store_true', help="Do neural_compressor optimize.")
     parser.add_argument("--output_path", help="path of neural_compressor convert model", default='./nc-tune.pb')
     # args
     args = parser.parse_args()
-
-
+    
     # benchmark PB model directly
     find_graph_def = tf_v1.GraphDef()
     if args.model_path and not args.model_name:
@@ -301,7 +367,7 @@ if __name__ == "__main__":
         if not model_detail:
             logger.error("Model undefined.")
             sys.exit(1)
-
+    
     inputs_shape = []
     inputs_dtype = []
     for input_tensor in model_detail['input'].values():
@@ -312,9 +378,9 @@ if __name__ == "__main__":
             # TODO: wait scalar support in dummy dataset
             inputs_shape.append((1,))
             inputs_dtype.append('bool')
-    logger.info("Final benchmark input nodes: name_list={}, shape_list={}, dtype_list={}".format( \
+    print("Final benchmark input nodes: name_list={}, shape_list={}, dtype_list={}".format( \
                 list(model_detail['input'].keys()), inputs_shape, inputs_dtype))
-    logger.info("Final benchmark output nodes: name_list={}".format(model_detail['output']))
+    print("Final benchmark output nodes: name_list={}".format(model_detail['output']))
 
     # tune
     if args.tune:
