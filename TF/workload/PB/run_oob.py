@@ -195,7 +195,8 @@ def run(args):
         core_per_instance_bs_pair = core_bs_scenario_map[scenario]
         core_per_instance = core_per_instance_bs_pair[0]
         bs = core_per_instance_bs_pair[1]
-        for option in [1, 2, 3]:
+        # for option in [1, 2, 3]:
+        for option in [3]:
             if option == 1:
                 # GC Generic Paattern
                 os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"

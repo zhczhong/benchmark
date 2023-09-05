@@ -201,7 +201,7 @@ function logs_path_clean {
     mkdir -p ${log_dir}
     if [ ! -e ${WORKSPACE}/summary.log ];then
         printf "framework,model_name,mode_name,precision,batch_size," | tee ${WORKSPACE}/summary.log
-        printf "cores_per_instance,instance,throughput,comp_time,mem_time,link,reference,benchmark_time\n" | tee -a ${WORKSPACE}/summary.log
+        printf "cores_per_instance,instance,throughput,comp_time,mem_time,link,reference,benchmark_time,correctness_check\n" | tee -a ${WORKSPACE}/summary.log
     fi
     # exec cmd
     excute_cmd_file="${log_dir}/${framework}-run-$(date +'%s').sh"
@@ -266,7 +266,7 @@ function collect_perf_logs {
     # printf "${batch_size},${cores_per_instance},${instance},${throughput}," |tee -a ${log_dir}/result.txt |tee -a ${WORKSPACE}/summary.log
     # printf "${comp_time},${mem_time},${artifact_url},${reference_value},${benchmark_time}\n" |tee -a ${log_dir}/result.txt |tee -a ${WORKSPACE}/summary.log
 
-    printf "${framework},${model_name},${mode_name},${precision},${batch_size},${cores_per_instance},${instance},${throughput},${comp_time},${mem_time},${artifact_url},${reference_value},${benchmark_time}\n" | tee -a ${log_dir}/result.txt |tee -a ${WORKSPACE}/summary.log
+    printf "${framework},${model_name},${mode_name},${precision},${batch_size},${cores_per_instance},${instance},${throughput},${comp_time},${mem_time},${artifact_url},${reference_value},${benchmark_time},${correctness_check}\n" | tee -a ${log_dir}/result.txt |tee -a ${WORKSPACE}/summary.log
  
     set +x
     echo -e "\n\n-------- Summary --------"
