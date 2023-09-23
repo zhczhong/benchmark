@@ -33,7 +33,8 @@ if [ ${model_all} == "key" ]; then
     model_all="\
         alexnet,\
         densenet161,\
-        efficientnet_b3,\
+        efficientnet_b0,\
+        efficientnet_b5,\
         fbnetc_100,\
         googlenet,\
         inception_v3,\
@@ -68,6 +69,16 @@ fi
 if [ ${sw_stack} == "torchdynamo_ipex" ]; then
     additional_options="${additional_options} --torchdynamo_ipex --channels_last 1 "
 fi
+if [ ${sw_stack} == "torchdynamo_inductor" ]; then
+    additional_options="${additional_options} --torchdynamo_inductor --channels_last 1 "
+fi
+if [ ${sw_stack} == "torchdynamo_onnxrt" ]; then
+    additional_options="${additional_options} --torchdynamo_onnxrt --channels_last 1 "
+fi
+
+if [ ${sw_stack} == "torchdynamo_ipex_op2" ]; then
+      additional_options="${additional_options} --torchdynamo_ipex --channels_last 1 --ipex"
+fi
 if [ ${sw_stack} == "int8_ipex" ]; then
     additional_options="${additional_options} --channels_last 1 --jit "
 fi
@@ -77,7 +88,12 @@ fi
 if [ ${sw_stack} == "ipex_op" ]; then
     additional_options="${additional_options} --ipex --channels_last 1"
 fi
-
+if [ ${sw_stack} == "torchdynamo_ipex_op3" ]; then
+     additional_options="${additional_options}  --torchdynamo_ipex  --ipex --channels_last 1 --graph_mode True "
+fi
+if [ ${sw_stack} == "ipex_graphmode" ]; then
+      additional_options="${additional_options} --ipex --channels_last 1 --graph_mode True "
+fi
 
 sockets_num=$(lscpu |grep 'Socket(s):' |sed 's/[^0-9]//g')
 cores_per_socket=$(lscpu |grep 'Core(s) per socket:' |sed 's/[^0-9]//g')
@@ -94,22 +110,19 @@ elif [ ${numa_mode} == "latency" ]; then
     ncpi=4
     num_instances=10
     batch_size=1
-elif [ ${numa_mode} == "accuracy" ]; then
-    ncpi=${cores_per_node}
-    num_instances=1
-    batch_size=`expr ${cores_per_node} \* 2`
 elif [ ${numa_mode} == "multi_instance" ]; then
     ncpi=4
     num_instances=`expr ${cores_per_node} / ${ncpi}`
     batch_size=1
+elif [ ${numa_mode} == "accuracy" ]; then
+    ncpi=${cores_per_node}
+    num_instances=1
+    batch_size=`expr ${cores_per_node} \* 2`
 fi
-if [ ${numa_mode} == "accuracy" ]; then
-    additional_options="${additional_options} --data /localdisk/pytorch_dataset/imagenet/"
-else
-    additional_options="${additional_options} --performance --dummy -i 200"
-fi
+
 export OUTPUT_DIR="$(pwd)/logs"
 
+export DATASET_DIR=${DATASET_DIR:-"/root/data/imagenet"}
 export LD_PRELOAD=${CONDA_PREFIX}/lib/libjemalloc.so
 export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
 export MALLOC_CONF="oversize_threshold:1,background_thread:true,metadata_thp:auto,dirty_decay_ms:9000000000,muzzy_decay_ms:9000000000"
@@ -128,23 +141,35 @@ else
     numa_launch_header=" python -m numa_launcher --node_id 0 --ninstances ${num_instances} --ncore_per_instance ${ncpi} --log_path=${OUTPUT_DIR} --log_file_prefix=${model}-${sw_stack}"
 fi
 
-for model in ${model_list[@]}
-do
-    ${numa_launch_header} main.py -e  --pretrained -w 20 --no-cuda -a ${model} -b ${batch_size} --precision ${precision} ${additional_options} \
-    2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
-    # for ((i=0;i<40;i=i+4))
-    # do
-    #     start=$i
-    #     end=${i+3}
-    #     numactl -C ${start}-${end} -m 0 /home/pnp/anaconda3/envs/molly_ov/bin/python -u main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b 80 --precision float32 --openvino --backend CPU \
-    #     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
-    # done
-    throughput=$(grep "Throughput:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g' | awk 'BEGIN {sum = 0;}{sum = sum + $1;} END {printf("%.3f", sum);}')
-    eval_accuracy=$(grep 'Accuracy' ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.eval_loss//;s/[^0-9.]//g;s/\.$//')
-    if [ ${numa_mode} == "accuracy" ]; then
-        accuracy=$(grep 'Accuracy:' ${OUTPUT_DIR}/resnet50_accuracy_log_${PRECISION}.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
-        echo broad_huggingface ${model} ${precision} ${numa_mode} ${sw_stack} ${accuracy} | tee -a ./logs/acc_summary.log
-    fi
-done
+if [ ${numa_mode} == "accuracy" ];then
+    for model in ${model_list[@]}
+    do
+        ${numa_launch_header} main.py -e --pretrained --no-cuda \
+            --data ${DATASET_DIR} \
+            -j 0 \
+            -w 0 \
+            -i 0 \
+            -a $model \
+            -b $batch_size \
+            --precision ${precision} --ipex ${additional_options} 2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
+        accuracy=$(grep 'Accuracy:' ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log |sed -e 's/.*Accuracy//;s/[^0-9.]//g')
+        echo $model IPEX ${precision} accuracy $accuracy | tee -a ./logs/summary.log
+    done
+else
+    for model in ${model_list[@]}
+    do
+        ${numa_launch_header} main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b ${batch_size} --precision ${precision} ${additional_options} \
+        2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
+        # for ((i=0;i<40;i=i+4))
+        # do
+        #     start=$i
+        #     end=${i+3}
+        #     numactl -C ${start}-${end} -m 0 /home/pnp/anaconda3/envs/molly_ov/bin/python -u main.py -e --performance --pretrained --dummy -w 20 -i 200 --no-cuda -a ${model} -b 80 --precision float32 --openvino --backend CPU \
+        #     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
+        # done
+        throughput=$(grep "Throughput:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g' | awk 'BEGIN {sum = 0;}{sum = sum + $1;} END {printf("%.3f", sum);}')
+        echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} | tee -a ./logs/summary.log
+    done
+fi
 
-cat ./logs/summary.log
+#cat ./logs/summary.log
