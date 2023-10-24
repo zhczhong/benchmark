@@ -361,9 +361,11 @@ def main_worker(gpu, ngpus_per_node, args):
         import intel_extension_for_pytorch as ipex
         if args.ipex:     
             if args.precision in ["bfloat16", "bfloat16_brutal"]:
-                model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True, graph_mode=args.graph_mode)
+                pass
+                # model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True, graph_mode=args.graph_mode)
             elif args.precision == "float32":
-                model = ipex.optimize(model, dtype=torch.float32, inplace=True, graph_mode=args.graph_mode)
+                pass
+                # model = ipex.optimize(model, dtype=torch.float32, inplace=True, graph_mode=args.graph_mode)
             print("[Info]Running with IPEX {}...".format(args.precision))
     if args.torchdynamo_ipex:
         import torch._dynamo
