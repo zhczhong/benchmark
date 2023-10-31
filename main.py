@@ -5,6 +5,7 @@ import shutil
 import time
 import warnings
 import PIL
+import timm
 
 import torch
 import torch.nn as nn
@@ -20,12 +21,11 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torch.fx.experimental.optimization as optimization
 
-
 import pretrainedmodels.utils
+
 MAIN_RANDOM_SEED = 1
 model_names = sorted(name for name in pretrainedmodels.__dict__
-                     if not name.startswith("__")
-                     and name.islower()
+                     if not name.startswith("__") and name.islower()
                      and callable(pretrainedmodels.__dict__[name]))
 
 params_dict = {
@@ -43,123 +43,235 @@ params_dict = {
 }
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('--data', metavar='DIR', default='',
+parser.add_argument('--data',
+                    metavar='DIR',
+                    default='',
                     help='path to dataset')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+parser.add_argument('-a',
+                    '--arch',
+                    metavar='ARCH',
+                    default='resnet18',
                     help='model architecture (default: resnet18)')
-parser.add_argument('-j', '--workers', default=1, type=int, metavar='N',
+parser.add_argument('-j',
+                    '--workers',
+                    default=1,
+                    type=int,
+                    metavar='N',
                     help='number of data loading workers (default: 1)')
-parser.add_argument('--epochs', default=90, type=int, metavar='N',
+parser.add_argument('--epochs',
+                    default=90,
+                    type=int,
+                    metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+parser.add_argument('--start-epoch',
+                    default=0,
+                    type=int,
+                    metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=256, type=int,
+parser.add_argument('-b',
+                    '--batch-size',
+                    default=256,
+                    type=int,
                     metavar='N',
                     help='mini-batch size (default: 256), this is the total '
-                         'batch size of all GPUs on the current node when '
-                         'using Data Parallel or Distributed Data Parallel')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                    metavar='LR', help='initial learning rate', dest='lr')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                    'batch size of all GPUs on the current node when '
+                    'using Data Parallel or Distributed Data Parallel')
+parser.add_argument('--lr',
+                    '--learning-rate',
+                    default=0.1,
+                    type=float,
+                    metavar='LR',
+                    help='initial learning rate',
+                    dest='lr')
+parser.add_argument('--momentum',
+                    default=0.9,
+                    type=float,
+                    metavar='M',
                     help='momentum')
-parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
-                    metavar='W', help='weight decay (default: 1e-4)',
+parser.add_argument('--wd',
+                    '--weight-decay',
+                    default=1e-4,
+                    type=float,
+                    metavar='W',
+                    help='weight decay (default: 1e-4)',
                     dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int,
-                    metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
+parser.add_argument('-p',
+                    '--print-freq',
+                    default=10,
+                    type=int,
+                    metavar='N',
+                    help='print frequency (default: 10)')
+parser.add_argument('--resume',
+                    default='',
+                    type=str,
+                    metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
+parser.add_argument('-e',
+                    '--evaluate',
+                    dest='evaluate',
+                    action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
+parser.add_argument('--pretrained',
+                    dest='pretrained',
+                    action='store_true',
                     help='use pre-trained model')
-parser.add_argument('--world-size', default=-1, type=int,
+parser.add_argument('--world-size',
+                    default=-1,
+                    type=int,
                     help='number of nodes for distributed training')
-parser.add_argument('--rank', default=-1, type=int,
+parser.add_argument('--rank',
+                    default=-1,
+                    type=int,
                     help='node rank for distributed training')
-parser.add_argument('--ppn', default=1, type=int,
-                    help='number of processes on each node of distributed training')
-parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
+parser.add_argument(
+    '--ppn',
+    default=1,
+    type=int,
+    help='number of processes on each node of distributed training')
+parser.add_argument('--dist-url',
+                    default='tcp://224.66.41.62:23456',
+                    type=str,
                     help='url used to set up distributed training')
-parser.add_argument('--dist-backend', default='nccl', type=str,
+parser.add_argument('--dist-backend',
+                    default='nccl',
+                    type=str,
                     help='distributed backend')
-parser.add_argument('--seed', default=None, type=int,
+parser.add_argument('--seed',
+                    default=None,
+                    type=int,
                     help='seed for initializing training. ')
-parser.add_argument('--gpu', default=None, type=int,
-                    help='GPU id to use.')
-parser.add_argument('--image_size', default=224, type=int,
-                    help='image size')
-parser.add_argument('--advprop', default=False, action='store_true',
+parser.add_argument('--gpu', default=None, type=int, help='GPU id to use.')
+parser.add_argument('--image_size', default=224, type=int, help='image size')
+parser.add_argument('--advprop',
+                    default=False,
+                    action='store_true',
                     help='use advprop or not')
-parser.add_argument('--multiprocessing-distributed', action='store_true',
+parser.add_argument('--multiprocessing-distributed',
+                    action='store_true',
                     help='Use multi-processing distributed training to launch '
-                         'N processes per node, which has N GPUs. This is the '
-                         'fastest way to use PyTorch for either single node or '
-                         'multi node data parallel training')
-parser.add_argument('--ipex', action='store_true', default=False,
+                    'N processes per node, which has N GPUs. This is the '
+                    'fastest way to use PyTorch for either single node or '
+                    'multi node data parallel training')
+parser.add_argument('--ipex',
+                    action='store_true',
+                    default=False,
                     help='use ipex weight cache')
 
-parser.add_argument('--openvino', action='store_true', default=False,
+parser.add_argument('--openvino',
+                    action='store_true',
+                    default=False,
                     help='use openvino weight cache')
 
-parser.add_argument('--jit', action='store_true', default=False,
+parser.add_argument('--jit',
+                    action='store_true',
+                    default=False,
                     help='enable JIT path')
-parser.add_argument('--jit_optimize', action='store_true', default=False,
+parser.add_argument('--jit_optimize',
+                    action='store_true',
+                    default=False,
                     help='enable JIT-optimize-for-inference path')
-parser.add_argument('--llga', action='store_true', default=False, help='enable LLGA')
-parser.add_argument('--precision', type=str, default="float32",
-                    help='precision: float32, bfloat16, int8_ipex, int8_imperative, int8_fx')
-parser.add_argument('--no-cuda', action='store_true', default=False,
+parser.add_argument('--llga',
+                    action='store_true',
+                    default=False,
+                    help='enable LLGA')
+parser.add_argument(
+    '--precision',
+    type=str,
+    default="float32",
+    help='precision: float32, bfloat16, int8_ipex, int8_imperative, int8_fx')
+parser.add_argument('--no-cuda',
+                    action='store_true',
+                    default=False,
                     help='disable CUDA')
-parser.add_argument('-i', '--iterations', default=200, type=int, metavar='N',
+parser.add_argument('-i',
+                    '--iterations',
+                    default=200,
+                    type=int,
+                    metavar='N',
                     help='number of total iterations to run')
-parser.add_argument('-w', '--warmup-iterations', default=10, type=int, metavar='N',
+parser.add_argument('-w',
+                    '--warmup-iterations',
+                    default=10,
+                    type=int,
+                    metavar='N',
                     help='number of warmup iterations to run')
-parser.add_argument("-t", "--profile", action='store_true',
+parser.add_argument("-t",
+                    "--profile",
+                    action='store_true',
                     help="Trigger profile on current topology.")
-parser.add_argument("--performance", action='store_true',
+parser.add_argument("--performance",
+                    action='store_true',
                     help="measure performance only, no accuracy.")
-parser.add_argument("--dummy", action='store_true',
-                    help="using  dummu data to test the performance of inference")
-parser.add_argument('--num-classes', type=int, default=1000,
+parser.add_argument(
+    "--dummy",
+    action='store_true',
+    help="using  dummu data to test the performance of inference")
+parser.add_argument('--num-classes',
+                    type=int,
+                    default=1000,
                     help='Number classes in dataset')
-parser.add_argument('--channels_last', type=int, default=1,
+parser.add_argument('--channels_last',
+                    type=int,
+                    default=1,
                     help='use channels last format')
-parser.add_argument('--to_mkldnn', type=int, default=0,
-                    help='use mkldnn')
-parser.add_argument("--save_config_file", type=str, default="",
-                    help='save config file for int8 tune during calibration steps')
-parser.add_argument('--load_config_file', type=str, default="",
-                    help='load config file for int8 tune, and skip calibration steps')
-parser.add_argument("--int8_mkldnn", action='store_true',
+parser.add_argument('--to_mkldnn', type=int, default=0, help='use mkldnn')
+parser.add_argument(
+    "--save_config_file",
+    type=str,
+    default="",
+    help='save config file for int8 tune during calibration steps')
+parser.add_argument(
+    '--load_config_file',
+    type=str,
+    default="",
+    help='load config file for int8 tune, and skip calibration steps')
+parser.add_argument("--int8_mkldnn",
+                    action='store_true',
                     help="using int8_mkldnn engine")
-parser.add_argument("--torchdynamo_ipex", action='store_true',
+parser.add_argument("--torchdynamo_ipex",
+                    action='store_true',
                     help="using torchdynamo with ipex backend")
-parser.add_argument("--torchdynamo_inductor", action='store_true',
+parser.add_argument("--torchdynamo_inductor",
+                    action='store_true',
                     help="using torchdynamo with inductor backend")
-parser.add_argument("--torchdynamo_onnxrt", action='store_true',
-                    help="using torchdynamo with onnxrt backend")                   
-parser.add_argument("--fx", action='store_true',
+parser.add_argument("--torchdynamo_onnxrt",
+                    action='store_true',
+                    help="using torchdynamo with onnxrt backend")
+parser.add_argument("--fx",
+                    action='store_true',
                     help="using fx.optimization.fuse")
-parser.add_argument("--torchdynamo_fx", action='store_true',
+parser.add_argument("--torchdynamo_fx",
+                    action='store_true',
                     help="using torchdynamo with fx backend")
-parser.add_argument("--num_multi_stream", type=int, default=-1,
+parser.add_argument("--num_multi_stream",
+                    type=int,
+                    default=-1,
                     help="the number of streams for IPEX multi-stream")
-parser.add_argument("--reduce_range", action='store_true',
-                    help="change the reduce_ranged used in ipex qconfig, default is False")
-parser.add_argument("--backend", type=str,
+parser.add_argument(
+    "--reduce_range",
+    action='store_true',
+    help="change the reduce_ranged used in ipex qconfig, default is False")
+parser.add_argument("--backend",
+                    type=str,
                     help="OpenVINO target device (CPU, GPU).")
-parser.add_argument("--ipex_op", action='store_true', default=False,
+parser.add_argument("--ipex_op",
+                    action='store_true',
+                    default=False,
                     help="using Ipex optimization without code change")
-parser.add_argument("--graph_mode", type=bool, default=False,
+parser.add_argument("--graph_mode",
+                    type=bool,
+                    default=False,
                     help="using Ipex graph mode")
-parser.add_argument("--check_correctness", type=bool, default=True,
+parser.add_argument("--check_correctness",
+                    type=bool,
+                    default=True,
                     help="using Ipex graph mode")
 args = parser.parse_args()
 
 if args.ipex:
     import intel_extension_for_pytorch as ipex
     print("Running with IPEX...")
+
 
 def main():
     args = parser.parse_args()
@@ -199,7 +311,9 @@ def main():
         args.world_size = ngpus_per_node * args.world_size
         # Use torch.multiprocessing.spawn to launch distributed processes: the
         # main_worker process function
-        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+        mp.spawn(main_worker,
+                 nprocs=ngpus_per_node,
+                 args=(ngpus_per_node, args))
     else:
         # Simply call main_worker function
         main_worker(args.gpu, ngpus_per_node, args)
@@ -220,97 +334,113 @@ def main_worker(gpu, ngpus_per_node, args):
             # For multiprocessing distributed training, rank needs to be the
             # global rank among all the processes
             args.rank = args.rank * ngpus_per_node + gpu
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                world_size=args.world_size, rank=args.rank)
+        dist.init_process_group(backend=args.dist_backend,
+                                init_method=args.dist_url,
+                                world_size=args.world_size,
+                                rank=args.rank)
     # create model
-    if 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
-        import geffnet
-        if args.jit:
-            geffnet.config.set_scriptable(True)
-        if args.pretrained:
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
-            print("=> using pre-trained model '{}'".format(args.arch))
-        else:
-            print("=> creating model '{}'".format(args.arch))
-            model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
-        model.train(False)
-    else:
-        if args.pretrained:
-            print("=> using pre-trained model '{}'".format(args.arch))
-            if args.arch == "inception_v3":
-                model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
+    try:
+        if 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
+            import geffnet
+            if args.jit:
+                geffnet.config.set_scriptable(True)
+            if args.pretrained:
+                model = geffnet.create_model(args.arch,
+                                             num_classes=args.num_classes,
+                                             in_chans=3,
+                                             pretrained=True)
+                print("=> using pre-trained model '{}'".format(args.arch))
             else:
-                if args.arch == "googlenet":
-                    model = models.__dict__[args.arch](pretrained=True, transform_input=False)
+                print("=> creating model '{}'".format(args.arch))
+                model = geffnet.create_model(args.arch,
+                                             num_classes=args.num_classes,
+                                             in_chans=3,
+                                             pretrained=False)
+            model.train(False)
+        else:
+            if args.pretrained:
+                print("=> using pre-trained model '{}'".format(args.arch))
+                if args.arch == "inception_v3":
+                    model = models.__dict__[args.arch](pretrained=True,
+                                                       aux_logits=True,
+                                                       transform_input=False)
                 else:
-                    model = models.__dict__[args.arch](pretrained=True)
-        else:
-            if args.arch == "inception_v3":
-                print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch](aux_logits=True)
+                    if args.arch == "googlenet":
+                        model = models.__dict__[args.arch](
+                            pretrained=True, transform_input=False)
+                    else:
+                        model = models.__dict__[args.arch](pretrained=True)
             else:
-                print("=> creating model '{}'".format(args.arch))
-                model = models.__dict__[args.arch]()
-        model.train(False)
+                if args.arch == "inception_v3":
+                    print("=> creating model '{}'".format(args.arch))
+                    model = models.__dict__[args.arch](aux_logits=True)
+                else:
+                    print("=> creating model '{}'".format(args.arch))
+                    model = models.__dict__[args.arch]()
+            model.train(False)
+    except:
+        model = timm.create_model(args.arch,
+                                  pretrained=True,
+                                  scriptable=True if args.jit else False)
     # below is old enabling with geffnet and pretrainedmodels
     # if 'efficientnet' in args.arch:  # NEW
-        # import geffnet
-        # geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
-        # if args.jit:
-            # geffnet.config.set_scriptable(True)
-        # if args.precision == "int8_ipex":
-            # geffnet.config.set_scriptable(True)
-        # if args.pretrained:
-            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
-            # print("=> using pre-trained model '{}'".format(args.arch))
-        # else:
-            # print("=> creating model '{}'".format(args.arch))
-            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
-        # model.train(False)
-    # elif 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
-        # import geffnet
-        # if args.jit:
-            # geffnet.config.set_scriptable(True)
-        # if args.pretrained:
-            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
-            # print("=> using pre-trained model '{}'".format(args.arch))
-        # else:
-            # print("=> creating model '{}'".format(args.arch))
-            # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
-        # model.train(False)
-    # elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch[0:4]:
-        # import pretrainedmodels
-        # import pretrainedmodels.utils
-        # if args.pretrained:
-            # model = pretrainedmodels.__dict__[args.arch](num_classes=args.num_classes, pretrained='imagenet')
-            # print("=> using pre-trained model '{}'".format(args.arch))
-        # else:
-            # print("=> creating model '{}'".format(args.arch))
-            # model = pretrainedmodels.__dict__[args.arch](pretrained=None)
-        # model.train(False)
-    # elif 'fpn' in args.arch:
-        # model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-        # model.train(False)
-        # args.iterations = 20
-        # print("Will run only ", args.iterations, " iterations for this model.")
+    # import geffnet
+    # geffnet.config.set_scriptable(False) # this is to disable TE fusion brought by @torch.jit.script decorators in geffnet model definition
+    # if args.jit:
+    # geffnet.config.set_scriptable(True)
+    # if args.precision == "int8_ipex":
+    # geffnet.config.set_scriptable(True)
+    # if args.pretrained:
+    # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
+    # print("=> using pre-trained model '{}'".format(args.arch))
     # else:
-        # if args.pretrained:
-            # print("=> using pre-trained model '{}'".format(args.arch))
-            # if args.arch == "inception_v3":
-                # model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
-            # else:
-                # if args.arch == "googlenet":
-                    # model = models.__dict__[args.arch](pretrained=True, transform_input=False)
-                # else:
-                    # model = models.__dict__[args.arch](pretrained=True)
-        # else:
-            # if args.arch == "inception_v3":
-                # print("=> creating model '{}'".format(args.arch))
-                # model = models.__dict__[args.arch](aux_logits=True)
-            # else:
-                # print("=> creating model '{}'".format(args.arch))
-                # model = models.__dict__[args.arch]()
-        # model.train(False)
+    # print("=> creating model '{}'".format(args.arch))
+    # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
+    # model.train(False)
+    # elif 'mixnet' in args.arch or 'fbnetc_100' in args.arch or 'spnasnet_100' in args.arch:
+    # import geffnet
+    # if args.jit:
+    # geffnet.config.set_scriptable(True)
+    # if args.pretrained:
+    # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=True)
+    # print("=> using pre-trained model '{}'".format(args.arch))
+    # else:
+    # print("=> creating model '{}'".format(args.arch))
+    # model = geffnet.create_model(args.arch, num_classes=args.num_classes, in_chans=3, pretrained=False)
+    # model.train(False)
+    # elif 'nasnetalarge' in args.arch or 'dpn' in args.arch or 'vggm' in args.arch or 'inceptionresnetv2' in args.arch or 'polynet' in args.arch or 'se_resne' in args.arch or 'senet' in args.arch[0:4]:
+    # import pretrainedmodels
+    # import pretrainedmodels.utils
+    # if args.pretrained:
+    # model = pretrainedmodels.__dict__[args.arch](num_classes=args.num_classes, pretrained='imagenet')
+    # print("=> using pre-trained model '{}'".format(args.arch))
+    # else:
+    # print("=> creating model '{}'".format(args.arch))
+    # model = pretrainedmodels.__dict__[args.arch](pretrained=None)
+    # model.train(False)
+    # elif 'fpn' in args.arch:
+    # model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    # model.train(False)
+    # args.iterations = 20
+    # print("Will run only ", args.iterations, " iterations for this model.")
+    # else:
+    # if args.pretrained:
+    # print("=> using pre-trained model '{}'".format(args.arch))
+    # if args.arch == "inception_v3":
+    # model = models.__dict__[args.arch](pretrained=True, aux_logits=True, transform_input=False)
+    # else:
+    # if args.arch == "googlenet":
+    # model = models.__dict__[args.arch](pretrained=True, transform_input=False)
+    # else:
+    # model = models.__dict__[args.arch](pretrained=True)
+    # else:
+    # if args.arch == "inception_v3":
+    # print("=> creating model '{}'".format(args.arch))
+    # model = models.__dict__[args.arch](aux_logits=True)
+    # else:
+    # print("=> creating model '{}'".format(args.arch))
+    # model = models.__dict__[args.arch]()
+    # model.train(False)
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -324,7 +454,8 @@ def main_worker(gpu, ngpus_per_node, args):
             # ourselves based on the total number of GPUs we have
             args.batch_size = int(args.batch_size / ngpus_per_node)
             args.workers = int(args.workers / ngpus_per_node)
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+            model = torch.nn.parallel.DistributedDataParallel(
+                model, device_ids=[args.gpu])
         else:
             if args.cuda:
                 model.cuda()
@@ -358,10 +489,11 @@ def main_worker(gpu, ngpus_per_node, args):
         model = optimization.fuse(model, inplace=True)
     if args.to_mkldnn and args.evaluate:
         model = torch.utils.mkldnn.to_mkldnn(model)
-    if  args.ipex or args.ipex_op:
-        print('[Info]Running ipex optmizetion with Graph_mode=', args.graph_mode)
+    if args.ipex or args.ipex_op:
+        print('[Info]Running ipex optmizetion with Graph_mode=',
+              args.graph_mode)
         import intel_extension_for_pytorch as ipex
-        if args.ipex:     
+        if args.ipex:
             if args.precision in ["bfloat16", "bfloat16_brutal"]:
                 pass
                 # model = ipex.optimize(model, dtype=torch.bfloat16, inplace=True, graph_mode=args.graph_mode)
@@ -372,27 +504,29 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.torchdynamo_ipex:
         import torch._dynamo
         torch._dynamo.reset()
-        model = torch.compile(model, backend='ipex')     
-        print("[Info]Running with Torchdynamo IPEX {}...".format(args.precision))
-   
+        model = torch.compile(model, backend='ipex')
+        print("[Info]Running with Torchdynamo IPEX {}...".format(
+            args.precision))
+
     if args.torchdynamo_inductor:
         import torch._dynamo
         torch._dynamo.reset()
         model = torch.compile(model, backend='inductor')
-        print("[Info]Running with Torchdynamo Inductor {}...".format(args.precision))
-    
+        print("[Info]Running with Torchdynamo Inductor {}...".format(
+            args.precision))
+
     if args.torchdynamo_onnxrt:
         import torch._dynamo
         torch._dynamo.reset()
         model = torch.compile(model, backend='onnxrt')
-        print("[Info]Running with Torchdynamo onnxrt {}...".format(args.precision))
-    
-    
+        print("[Info]Running with Torchdynamo onnxrt {}...".format(
+            args.precision))
+
     if args.openvino:
         from torch_ort import ORTInferenceModule, OpenVINOProviderOptions
-        if args.precision == "float32": 
-            provider_options = OpenVINOProviderOptions(
-                    backend=args.backend, precision="FP32")
+        if args.precision == "float32":
+            provider_options = OpenVINOProviderOptions(backend=args.backend,
+                                                       precision="FP32")
         model = ORTInferenceModule(model, provider_options=provider_options)
         # print('++++++++++++++++++++++++++++xxxx++++++++++++++++++++++++')
         # start = time.time()
@@ -406,7 +540,8 @@ def main_worker(gpu, ngpus_per_node, args):
     else:
         criterion = nn.CrossEntropyLoss()
     if not args.evaluate:
-        optimizer = torch.optim.SGD(model.parameters(), args.lr,
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    args.lr,
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
 
@@ -427,8 +562,8 @@ def main_worker(gpu, ngpus_per_node, args):
                 best_acc1 = best_acc1.to(args.gpu)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+            print("=> loaded checkpoint '{}' (epoch {})".format(
+                args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -455,13 +590,18 @@ def main_worker(gpu, ngpus_per_node, args):
             ]))
 
         if args.distributed:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+            train_sampler = torch.utils.data.distributed.DistributedSampler(
+                train_dataset)
         else:
             train_sampler = None
 
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-            num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=(train_sampler
+                                                            is None),
+                                                   num_workers=args.workers,
+                                                   pin_memory=True,
+                                                   sampler=train_sampler)
 
     if 'efficientnet' in args.arch:
         image_size = get_image_size(args.arch)
@@ -488,43 +628,59 @@ def main_worker(gpu, ngpus_per_node, args):
 
     val_loader = []
     if not args.dummy and args.data and args.evaluate:
-        val_loader = torch.utils.data.DataLoader(
-            datasets.ImageFolder(valdir, val_transforms),
-            batch_size=args.batch_size, shuffle=False,
-            num_workers=args.workers, pin_memory=True)
+        val_loader = torch.utils.data.DataLoader(datasets.ImageFolder(
+            valdir, val_transforms),
+                                                 batch_size=args.batch_size,
+                                                 shuffle=False,
+                                                 num_workers=args.workers,
+                                                 pin_memory=True)
 
     if args.ipex and args.num_multi_stream != -1:
         args.traced_bs = args.batch_size // args.num_multi_stream
-        print("IPEX Runtime Extension: Multi-stream with Mini BATCH_SIZE: ", args.traced_bs)
+        print("IPEX Runtime Extension: Multi-stream with Mini BATCH_SIZE: ",
+              args.traced_bs)
 
     if args.evaluate:
-        batch_size = args.traced_bs if (args.ipex and args.num_multi_stream != -1) else args.batch_size
+        batch_size = args.traced_bs if (
+            args.ipex and args.num_multi_stream != -1) else args.batch_size
         if args.channels_last:
-            x = torch.randn(batch_size, 3, args.image_size, args.image_size).contiguous(memory_format=torch.channels_last)
+            x = torch.randn(
+                batch_size, 3, args.image_size,
+                args.image_size).contiguous(memory_format=torch.channels_last)
         else:
-            x = torch.randn(batch_size, 3, args.image_size, args.image_size).contiguous()
+            x = torch.randn(batch_size, 3, args.image_size,
+                            args.image_size).contiguous()
         if args.to_mkldnn:
             x = x.to_mkldnn()
         if args.precision == "int8_ipex":
             import intel_extension_for_pytorch as ipex
             #qconfig = ipex.quantization.default_static_qconfig
             from torch.ao.quantization import HistogramObserver, PerChannelMinMaxObserver, QConfig
-            qconfig = QConfig(activation=HistogramObserver.with_args(reduce_range=args.reduce_range),
-                weight=PerChannelMinMaxObserver.with_args(dtype=torch.qint8, qscheme=torch.per_channel_symmetric, reduce_range=args.reduce_range))
-            prepared_model = ipex.quantization.prepare(model, qconfig, example_inputs=x, inplace=False)
+            qconfig = QConfig(activation=HistogramObserver.with_args(
+                reduce_range=args.reduce_range),
+                              weight=PerChannelMinMaxObserver.with_args(
+                                  dtype=torch.qint8,
+                                  qscheme=torch.per_channel_symmetric,
+                                  reduce_range=args.reduce_range))
+            prepared_model = ipex.quantization.prepare(model,
+                                                       qconfig,
+                                                       example_inputs=x,
+                                                       inplace=False)
             if args.load_config_file == "":
                 with torch.no_grad():
                     for i, (images, target) in enumerate(val_loader):
                         if i > 300 // args.batch_size:
                             break
                         if args.channels_last:
-                            images = images.contiguous(memory_format=torch.channels_last)
+                            images = images.contiguous(
+                                memory_format=torch.channels_last)
                         output = prepared_model(images)
-                    print ("[Info] Calibration finished")
+                    print("[Info] Calibration finished")
                 if args.save_config_file != "":
                     prepared_model.save_qconf_summary(args.save_config_file)
             else:
-                prepared_model.load_qconf_summary(qconf_summary=args.load_config_file)
+                prepared_model.load_qconf_summary(
+                    qconf_summary=args.load_config_file)
             convert_model = ipex.quantization.convert(prepared_model)
             model = convert_model
             with torch.no_grad():
@@ -533,20 +689,24 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.jit and not args.jit_optimize:
             if args.cuda:
                 x = x.cuda(args.gpu, non_blocking=True)
-            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
-                if args.precision =="bfloat16_brutal":
+            if args.precision in ["bfloat16", "bfloat16_brutal"
+                                  ] and not args.cuda:
+                if args.precision == "bfloat16_brutal":
                     x = x.to(torch.bfloat16)
-                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
+                with torch.cpu.amp.autocast(
+                        enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT ...")
-                    if args.precision =="bfloat16_brutal":
+                    if args.precision == "bfloat16_brutal":
                         model = model.to(dtype=torch.bfloat16)
                     model = torch.jit.trace(model, x, check_trace=False)
-            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
-                if args.precision =="float16_brutal":
+            elif args.precision in ["bfloat16", "bfloat16_brutal"
+                                    ] and args.cuda:
+                if args.precision == "float16_brutal":
                     x = x.to(torch.float16)
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
+                with torch.cuda.amp.autocast(
+                        enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT ...")
-                    if args.precision =="float16_brutal":
+                    if args.precision == "float16_brutal":
                         model = model.to(dtype=torch.float16)
                     model = torch.jit.trace(model, x, check_trace=False)
             else:
@@ -557,28 +717,38 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.jit and args.jit_optimize:
             if args.cuda:
                 x = x.cuda(args.gpu, non_blocking=True)
-            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
-                if args.precision =="bfloat16_brutal":
+            if args.precision in ["bfloat16", "bfloat16_brutal"
+                                  ] and not args.cuda:
+                if args.precision == "bfloat16_brutal":
                     x = x.to(torch.bfloat16)
-                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16), torch.no_grad():
+                with torch.cpu.amp.autocast(
+                        enabled=True, dtype=torch.bfloat16), torch.no_grad():
                     print("Using CPU autocast to JIT.optimize ...")
-                    if args.precision =="bfloat16_brutal":
+                    if args.precision == "bfloat16_brutal":
                         model = model.to(dtype=torch.bfloat16)
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
-            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
+                    model = torch.jit.optimize_for_inference(
+                        torch.jit.trace(model, x, check_trace=False))
+            elif args.precision in ["bfloat16", "bfloat16_brutal"
+                                    ] and args.cuda:
                 x = x.to(torch.float16)
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16), torch.no_grad():
+                with torch.cuda.amp.autocast(
+                        enabled=True, dtype=torch.float16), torch.no_grad():
                     print("Using CUDA autocast to JIT.optimize ...")
                     model = model.to(dtype=torch.float16)
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
+                    model = torch.jit.optimize_for_inference(
+                        torch.jit.trace(model, x, check_trace=False))
             else:
                 with torch.no_grad():
-                    model = torch.jit.optimize_for_inference(torch.jit.trace(model, x, check_trace=False))
+                    model = torch.jit.optimize_for_inference(
+                        torch.jit.trace(model, x, check_trace=False))
             print("---- With JIT.optimize_for_inference enabled.")
-            
+
         if args.ipex and args.num_multi_stream != -1:
-            model = ipex.cpu.runtime.MultiStreamModule(model, num_streams=args.num_multi_stream)
-            print("IPEX Runtime Extension: Multi-stream enabled with num_streams = ", args.num_multi_stream)
+            model = ipex.cpu.runtime.MultiStreamModule(
+                model, num_streams=args.num_multi_stream)
+            print(
+                "IPEX Runtime Extension: Multi-stream enabled with num_streams = ",
+                args.num_multi_stream)
 
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
@@ -588,9 +758,9 @@ def main_worker(gpu, ngpus_per_node, args):
             print("Using CUDA autocast ...")
             with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
                 res = validate(val_loader, model, criterion, args, model_eager)
-        else:  
+        else:
             res = validate(val_loader, model, criterion, args, model_eager)
-        
+
         # with open('res.txt', 'w') as f:
         #     print(res, file=f)
         return
@@ -605,30 +775,39 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # evaluate on validation set
         if not args.performance:
-            if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
+            if args.precision in ["bfloat16", "bfloat16_brutal"
+                                  ] and not args.cuda:
                 print("Using CPU autocast ...")
-                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
-                    acc1 = validate(val_loader, model, criterion, args, model_eager)
-            elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
+                with torch.cpu.amp.autocast(enabled=True,
+                                            dtype=torch.bfloat16):
+                    acc1 = validate(val_loader, model, criterion, args,
+                                    model_eager)
+            elif args.precision in ["bfloat16", "bfloat16_brutal"
+                                    ] and args.cuda:
                 print("Using CUDA autocast ...")
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
-                    acc1 = validate(val_loader, model, criterion, args, model_eager)
+                with torch.cuda.amp.autocast(enabled=True,
+                                             dtype=torch.float16):
+                    acc1 = validate(val_loader, model, criterion, args,
+                                    model_eager)
             else:
-                acc1 = validate(val_loader, model, criterion, args, model_eager)
+                acc1 = validate(val_loader, model, criterion, args,
+                                model_eager)
 
             # remember best acc@1 and save checkpoint
             is_best = acc1 > best_acc1
             best_acc1 = max(acc1, best_acc1)
 
-            if not args.multiprocessing_distributed or (args.multiprocessing_distributed
-                                                        and args.rank % ngpus_per_node == 0):
-                save_checkpoint({
-                    'epoch': epoch + 1,
-                    'arch': args.arch,
-                    'state_dict': model.state_dict(),
-                    'best_acc1': best_acc1,
-                    'optimizer': optimizer.state_dict(),
-                }, is_best)
+            if not args.multiprocessing_distributed or (
+                    args.multiprocessing_distributed
+                    and args.rank % ngpus_per_node == 0):
+                save_checkpoint(
+                    {
+                        'epoch': epoch + 1,
+                        'arch': args.arch,
+                        'state_dict': model.state_dict(),
+                        'best_acc1': best_acc1,
+                        'optimizer': optimizer.state_dict(),
+                    }, is_best)
 
 
 def get_image_size(model_name):
@@ -638,16 +817,17 @@ def get_image_size(model_name):
         assert False, "Unsupported model:{}".format(model_name)
     return res
 
+
 def preprocess(img):
-    transform = transforms.Compose(
-        [
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
     return transform(img)
+
 
 def set_random_seed():
     import torch
@@ -731,6 +911,7 @@ def same(a, b, cos_similarity=False, atol=1e-4, rtol=1e-4, equal_nan=False):
     else:
         raise RuntimeError(f"unsupported type: {type(a).__name__}")
 
+
 def correctness_check(model,
                       model_eager,
                       example_input,
@@ -759,15 +940,21 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(train_loader), batch_time, data_time, losses, top1,
-                             top5, prefix="Epoch: [{}]".format(epoch))
+    progress = ProgressMeter(len(train_loader),
+                             batch_time,
+                             data_time,
+                             losses,
+                             top1,
+                             top5,
+                             prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
 
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
-        if args.iterations > 0 and i >= (args.warmup_iterations + args.iterations):
+        if args.iterations > 0 and i >= (args.warmup_iterations +
+                                         args.iterations):
             break
         # measure data loading time
         if i >= args.warmup_iterations:
@@ -808,41 +995,48 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     if args.performance:
         batch_size = train_loader.batch_size
         latency = batch_time.avg / batch_size * 1000
-        perf = batch_size/batch_time.avg
-        print('training latency: %3.0f ms on %d epoch'%(latency, epoch))
-        print('training Throughput: %3.0f fps on %d epoch'%(perf, epoch))
+        perf = batch_size / batch_time.avg
+        print('training latency: %3.0f ms on %d epoch' % (latency, epoch))
+        print('training Throughput: %3.0f fps on %d epoch' % (perf, epoch))
 
 
-def validate(val_loader, model, criterion, args, model_eager = None):
+def validate(val_loader, model, criterion, args, model_eager=None):
     iterations = args.iterations
     warmup = args.warmup_iterations
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(val_loader), batch_time, losses, top1, top5,
+    progress = ProgressMeter(len(val_loader),
+                             batch_time,
+                             losses,
+                             top1,
+                             top5,
                              prefix='Test: ')
 
     # switch to evaluate mode
     model.eval()
 
-
     with torch.no_grad():
         if args.llga:
             torch._C._jit_set_llga_enabled(True)
-            model = torch.jit.trace(model, torch.rand(args.batch_size, 3, args.image_size, args.image_size))
+            model = torch.jit.trace(
+                model,
+                torch.rand(args.batch_size, 3, args.image_size,
+                           args.image_size))
             model = torch.jit.freeze(model)
             print("---- Enable LLGA.")
 
         if args.precision in ["bfloat16", "bfloat16_brutal"]:
-            # with torch.amp.autocast(enabled=True, configure=torch.bfloat16, torch.no_grad(): 
+            # with torch.amp.autocast(enabled=True, configure=torch.bfloat16, torch.no_grad():
             print("Running with bfloat16...")
         images = None
         if args.dummy:
-            images = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
+            images = torch.randn(args.batch_size, 3, args.image_size,
+                                 args.image_size)
             target = torch.arange(1, args.batch_size + 1).long()
             if args.precision in ["bfloat16", "bfloat16_brutal"]:
-                if args.precision =="bfloat16_brutal":
+                if args.precision == "bfloat16_brutal":
                     images = images.to(torch.bfloat16)
                     target = target.to(torch.bfloat16)
             # print("Start convert to onnx!")
@@ -889,29 +1083,40 @@ def validate(val_loader, model, criterion, args, model_eager = None):
                 if args.torchdynamo_fx:
                     from typing import List
                     import torchdynamo
-                    def fx_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+
+                    def fx_compiler(gm: torch.fx.GraphModule,
+                                    example_inputs: List[torch.Tensor]):
                         return gm.forward  # return a python callable
+
                     if args.precision == "float32":
-                        with torchdynamo.optimize(fx_compiler), torch.no_grad():
+                        with torchdynamo.optimize(
+                                fx_compiler), torch.no_grad():
                             if args.profile:
-                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                with torch.profiler.profile(activities=[
+                                        torch.profiler.ProfilerActivity.CPU
+                                ]) as prof:
                                     output = model(images)
                             else:
                                 output = model(images)
                     if args.precision == "bfloat16":
-                        with torchdynamo.optimize(fx_compiler), torch.no_grad(), torch.cpu.amp.autocast():
+                        with torchdynamo.optimize(fx_compiler), torch.no_grad(
+                        ), torch.cpu.amp.autocast():
                             if args.profile:
-                                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                                with torch.profiler.profile(activities=[
+                                        torch.profiler.ProfilerActivity.CPU
+                                ]) as prof:
                                     output = model(images)
                             else:
                                 output = model(images)
                 else:
                     if args.profile:
-                        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                        with torch.profiler.profile(activities=[
+                                torch.profiler.ProfilerActivity.CPU
+                        ]) as prof:
                             output = model(images)
                     else:
                         output = model(images)
- 
+
                 # measure elapsed time
                 if i >= warmup:
                     batch_time.update(time.time() - end)
@@ -928,13 +1133,16 @@ def validate(val_loader, model, criterion, args, model_eager = None):
                     if args.cuda:
                         target = target.cuda(args.gpu, non_blocking=True)
                     if args.channels_last:
-                        images = images.contiguous(memory_format=torch.channels_last)
+                        images = images.contiguous(
+                            memory_format=torch.channels_last)
                     if args.precision in ["bfloat16", "bfloat16_brutal"]:
-                        if args.precision =="bfloat16_brutal":
+                        if args.precision == "bfloat16_brutal":
                             images = images.to(torch.bfloat16)
                             target = target.to(torch.bfloat16)
                     if args.profile:
-                        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as prof:
+                        with torch.profiler.profile(activities=[
+                                torch.profiler.ProfilerActivity.CPU
+                        ]) as prof:
                             output = model(images)
                     else:
                         print("-------------------")
@@ -956,8 +1164,8 @@ def validate(val_loader, model, criterion, args, model_eager = None):
                         progress.print(i)
                 elif i == iterations + warmup:
                     break
-            print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-                  .format(top1=top1, top5=top5))
+            print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'.format(
+                top1=top1, top5=top5))
             print("Accuracy: {top1.avg:.3f} ".format(top1=top1))
 
         if args.profile:
@@ -969,7 +1177,8 @@ def validate(val_loader, model, criterion, args, model_eager = None):
                         args.arch + str(i + 1) + '-' + str(os.getpid()) + '.json'
 
             prof.export_chrome_trace(timeline_file)
-            print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
+            print(prof.key_averages().table(sort_by="self_cpu_time_total",
+                                            row_limit=-1))
             # table_res = prof.key_averages().table(sort_by="cpu_time_total")
             # save_profile_result(torch.backends.quantized.engine + "_result_average.xlsx", table_res)
 
@@ -977,14 +1186,13 @@ def validate(val_loader, model, criterion, args, model_eager = None):
         if args.evaluate:
             batch_size = args.batch_size
             latency = batch_time.avg / batch_size * 1000
-            perf = batch_size/batch_time.avg
-            print('inference latency: %3.3f ms'%latency)
-            print('inference Throughput: %3.3f fps'%perf)
+            perf = batch_size / batch_time.avg
+            print('inference latency: %3.3f ms' % latency)
+            print('inference Throughput: %3.3f fps' % perf)
 
         if args.check_correctness and model_eager is not None:
             if args.channels_last:
-                example_input = images.to(
-                    memory_format=torch.channels_last)
+                example_input = images.to(memory_format=torch.channels_last)
             atol = 1e-3
             rtol = 1e-3
             result = correctness_check(model,
@@ -1007,6 +1215,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
+
     def __init__(self, name, fmt=':f'):
         self.name = name
         self.fmt = fmt
@@ -1030,6 +1239,7 @@ class AverageMeter(object):
 
 
 class ProgressMeter(object):
+
     def __init__(self, num_batches, *meters, prefix=""):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
@@ -1048,12 +1258,12 @@ class ProgressMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
+    lr = args.lr * (0.1**(epoch // 30))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 
-def accuracy(output, target, topk=(1,)):
+def accuracy(output, target, topk=(1, )):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
         maxk = max(topk)
@@ -1070,7 +1280,6 @@ def accuracy(output, target, topk=(1,)):
         return res
 
 
-
 def save_profile_result(filename, table):
     import xlsxwriter
     workbook = xlsxwriter.Workbook(filename)
@@ -1081,13 +1290,15 @@ def save_profile_result(filename, table):
         worksheet.write(0, j, keys[j])
 
     lines = table.split("\n")
-    for i in range(3, len(lines)-4):
+    for i in range(3, len(lines) - 4):
         words = lines[i].split(" ")
         j = 0
         for word in words:
             if not word == "":
-                worksheet.write(i-2, j, word)
+                worksheet.write(i - 2, j, word)
                 j += 1
     workbook.close()
+
+
 if __name__ == '__main__':
     main()
