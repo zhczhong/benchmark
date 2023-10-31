@@ -168,7 +168,8 @@ else
         #     2>&1 | tee ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log
         # done
         throughput=$(grep "Throughput:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/.*Throughput//;s/[^0-9.]//g' | awk 'BEGIN {sum = 0;}{sum = sum + $1;} END {printf("%.3f", sum);}')
-        echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} | tee -a ./logs/summary.log
+        correctness=$(grep "Correctness result:" ./logs/${model}-${precision}-${numa_mode}-${sw_stack}.log | sed -e 's/Correctness result: //g')
+        echo broad_vision ${model} ${precision} ${numa_mode} ${sw_stack} ${throughput} ${correctness} | tee -a ./logs/summary.log
     done
 fi
 

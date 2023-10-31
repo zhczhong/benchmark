@@ -22,7 +22,7 @@ import torch.fx.experimental.optimization as optimization
 
 
 import pretrainedmodels.utils
-
+MAIN_RANDOM_SEED = 1
 model_names = sorted(name for name in pretrainedmodels.__dict__
                      if not name.startswith("__")
                      and name.islower()
@@ -152,6 +152,8 @@ parser.add_argument("--backend", type=str,
 parser.add_argument("--ipex_op", action='store_true', default=False,
                     help="using Ipex optimization without code change")
 parser.add_argument("--graph_mode", type=bool, default=False,
+                    help="using Ipex graph mode")
+parser.add_argument("--check_correctness", type=bool, default=True,
                     help="using Ipex graph mode")
 args = parser.parse_args()
 
@@ -527,6 +529,7 @@ def main_worker(gpu, ngpus_per_node, args):
             model = convert_model
             with torch.no_grad():
                 y = model(x)
+        model_eager = model
         if args.jit and not args.jit_optimize:
             if args.cuda:
                 x = x.cuda(args.gpu, non_blocking=True)
@@ -580,13 +583,13 @@ def main_worker(gpu, ngpus_per_node, args):
         if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
             print("Using CPU autocast ...")
             with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
-                res = validate(val_loader, model, criterion, args)
+                res = validate(val_loader, model, criterion, args, model_eager)
         elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
             print("Using CUDA autocast ...")
             with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
-                res = validate(val_loader, model, criterion, args)
+                res = validate(val_loader, model, criterion, args, model_eager)
         else:  
-            res = validate(val_loader, model, criterion, args)
+            res = validate(val_loader, model, criterion, args, model_eager)
         
         # with open('res.txt', 'w') as f:
         #     print(res, file=f)
@@ -605,13 +608,13 @@ def main_worker(gpu, ngpus_per_node, args):
             if args.precision in ["bfloat16", "bfloat16_brutal"] and not args.cuda:
                 print("Using CPU autocast ...")
                 with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
-                    acc1 = validate(val_loader, model, criterion, args)
+                    acc1 = validate(val_loader, model, criterion, args, model_eager)
             elif args.precision in ["bfloat16", "bfloat16_brutal"] and args.cuda:
                 print("Using CUDA autocast ...")
                 with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
-                    acc1 = validate(val_loader, model, criterion, args)
+                    acc1 = validate(val_loader, model, criterion, args, model_eager)
             else:
-                acc1 = validate(val_loader, model, criterion, args)
+                acc1 = validate(val_loader, model, criterion, args, model_eager)
 
             # remember best acc@1 and save checkpoint
             is_best = acc1 > best_acc1
@@ -645,7 +648,110 @@ def preprocess(img):
         ]
     )
     return transform(img)
-    
+
+def set_random_seed():
+    import torch
+    import random
+    import numpy
+    torch.manual_seed(MAIN_RANDOM_SEED)
+    random.seed(MAIN_RANDOM_SEED)
+    numpy.random.seed(MAIN_RANDOM_SEED)
+
+
+# copied from https://github.com/pytorch/torchdynamo/blob/main/torchdynamo/utils.py#L411
+def same(a, b, cos_similarity=False, atol=1e-4, rtol=1e-4, equal_nan=False):
+    """Check correctness to see if a and b match"""
+    import torch
+    import math
+    if isinstance(a, (list, tuple, torch.nn.ParameterList, torch.Size)):
+        assert isinstance(b,
+                          (list, tuple)), f"type mismatch {type(a)} {type(b)}"
+        return len(a) == len(b) and all(
+            same(ai, bi, cos_similarity, atol, rtol, equal_nan)
+            for ai, bi in zip(a, b))
+    elif isinstance(a, dict):
+        assert isinstance(b, dict)
+        assert set(a.keys()) == set(
+            b.keys()), f"keys mismatch {set(a.keys())} == {set(b.keys())}"
+        for k in a.keys():
+            if not (same(
+                    a[k], b[k], cos_similarity, atol, rtol,
+                    equal_nan=equal_nan)):
+                print("Accuracy failed for key name", k)
+                return False
+        return True
+    elif isinstance(a, torch.Tensor):
+        if a.is_sparse:
+            assert b.is_sparse
+            a = a.to_dense()
+            b = b.to_dense()
+        if not isinstance(b, torch.Tensor):
+            return False
+        if cos_similarity:
+            # TRT will bring error loss larger than current threshold. Use cosine similarity as replacement
+            a = a.flatten().to(torch.float32)
+            b = b.flatten().to(torch.float32)
+            res = torch.nn.functional.cosine_similarity(a, b, dim=0, eps=1e-6)
+            if res < 0.99:
+                print(f"Similarity score={res.cpu().detach().item()}")
+            return res >= 0.99
+        else:
+            return torch.allclose(a,
+                                  b,
+                                  atol=atol,
+                                  rtol=rtol,
+                                  equal_nan=equal_nan)
+    elif isinstance(a, (str, int, type(None), bool, torch.device)):
+        return a == b
+    elif isinstance(a, float):
+        return math.isclose(a, b, rel_tol=rtol, abs_tol=atol)
+    elif is_numpy_int_type(a) or is_numpy_float_type(a):
+        return (type(a) is type(b)) and (a == b)
+    elif is_numpy_ndarray(a):
+        return (type(a)
+                is type(b)) and same(torch.from_numpy(a), torch.from_numpy(b),
+                                     cos_similarity, atol, rtol, equal_nan)
+    elif type(a).__name__ in (
+            "MaskedLMOutput",
+            "Seq2SeqLMOutput",
+            "CausalLMOutputWithCrossAttentions",
+            "LongformerMaskedLMOutput",
+            "Instances",
+            "SquashedNormal",
+            "Boxes",
+            "Normal",
+            "TanhTransform",
+            "Foo",
+            "Variable",
+    ):
+        assert type(a) is type(b)
+        return all(
+            same(getattr(a, key), getattr(b, key), cos_similarity, atol, rtol,
+                 equal_nan) for key in a.__dict__.keys())
+    else:
+        raise RuntimeError(f"unsupported type: {type(a).__name__}")
+
+def correctness_check(model,
+                      model_eager,
+                      example_input,
+                      cos_sim=True,
+                      rounds=10,
+                      atol=1e-4,
+                      rtol=1e-4) -> bool:
+    set_random_seed()
+    for _i in range(rounds):
+        x = torch.rand_like(example_input)
+        eager_output = model_eager(x)
+        cur_result = model(x)
+        if not same(eager_output,
+                    cur_result,
+                    cos_similarity=cos_sim,
+                    atol=atol,
+                    rtol=rtol,
+                    equal_nan=True):
+            return False
+    return True
+
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -707,7 +813,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         print('training Throughput: %3.0f fps on %d epoch'%(perf, epoch))
 
 
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, criterion, args, model_eager = None):
     iterations = args.iterations
     warmup = args.warmup_iterations
     batch_time = AverageMeter('Time', ':6.3f')
@@ -731,6 +837,7 @@ def validate(val_loader, model, criterion, args):
         if args.precision in ["bfloat16", "bfloat16_brutal"]:
             # with torch.amp.autocast(enabled=True, configure=torch.bfloat16, torch.no_grad(): 
             print("Running with bfloat16...")
+        images = None
         if args.dummy:
             images = torch.randn(args.batch_size, 3, args.image_size, args.image_size)
             target = torch.arange(1, args.batch_size + 1).long()
@@ -873,6 +980,22 @@ def validate(val_loader, model, criterion, args):
             perf = batch_size/batch_time.avg
             print('inference latency: %3.3f ms'%latency)
             print('inference Throughput: %3.3f fps'%perf)
+
+        if args.check_correctness and model_eager is not None:
+            if args.channels_last:
+                example_input = images.to(
+                    memory_format=torch.channels_last)
+            atol = 1e-3
+            rtol = 1e-3
+            result = correctness_check(model,
+                                       model_eager,
+                                       example_input,
+                                       atol=atol,
+                                       rtol=rtol)
+            if result:
+                print("Correctness result: Pass")
+            else:
+                print("Correctness result: Fail")
     return top1.avg
 
 
@@ -945,6 +1068,7 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+
 
 
 def save_profile_result(filename, table):
