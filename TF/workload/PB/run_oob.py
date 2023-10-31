@@ -25,13 +25,11 @@ supported_datatypes = ["f32", "bfloat16", "int8", "all"]
 supported_scenarios = ["realtime", "throughput", "all"]
 
 oob_model_list = [
-    "3d-pose-baseline",
     "aipg-vdcnn",
     "arttrack-coco-multi",
     "arttrack-mpii-single",
     "ava-face-recognition-3_0_0",
     "ava-person-vehicle-detection-stage2-2_0_0",
-    "bert-base-uncased_L-12_H-768_A-12",
     "cpm-person",
     "ctpn",
     "darknet19",
@@ -43,7 +41,6 @@ oob_model_list = [
     "densenet-161",
     "densenet-169",
     "dilation",
-    "DRAW",
     "DSSD_12",
     "east_resnet_v1_50",
     "efficientnet-b0",
@@ -68,8 +65,6 @@ oob_model_list = [
     "googlenet-v4",
     "GraphSage",
     "handwritten-score-recognition-0003",
-    "Hierarchical_LSTM",
-    "HugeCTR",
     "i3d-flow",
     "i3d-rgb",
     "icnet-camvid-ava-0001",
@@ -84,7 +79,6 @@ oob_model_list = [
     "learning-to-see-in-the-dark-sony",
     "license-plate-recognition-barrier-0007",
     "mask_rcnn_inception_resnet_v2_atrous_coco",
-    "NCF-1B",
     "openpose-pose",
     "optical_character_recognition-text_recognition-tf",
     "person-vehicle-bike-detection-crossroad-yolov3-1020",
@@ -108,7 +102,6 @@ oob_model_list = [
     "text-recognition-0012",
     "tiny_yolo_v1",
     "tiny_yolo_v2",
-    "Transformer-LT",
     "vehicle-attributes-barrier-0103",
     "vehicle-license-plate-detection-barrier-0123",
     "vgg16",
@@ -125,7 +118,47 @@ oob_model_list = [
     "yolo-v2-tiny-vehicle-detection-0001",
     "yolo-v3",
     "yolo-v3-tiny",
+    "3d-pose-baseline",
+    "bert-base-uncased_L-12_H-768_A-12",
+    "DRAW",
+    "Hierarchical_LSTM",
+    "HugeCTR",
+    "NCF-1B",
+    "Transformer-LT",
 ]
+slected_model = [
+    "faster_rcnn_inception_resnet_v2_atrous_coco",
+    "faster_rcnn_nas_coco_2018_01_28",
+    "faster_rcnn_nas_lowproposals_coco",
+    "faster_rcnn_resnet101_ava_v2_1",
+    "faster_rcnn_resnet101_coco",
+    "faster_rcnn_resnet101_kitti",
+    "faster_rcnn_resnet101_lowproposals_coco",
+    "faster_rcnn_resnet50_coco",
+    "faster_rcnn_resnet50_lowproposals_coco",
+    "GAN",
+    "icnet-camvid-ava-0001",
+    "icnet-camvid-ava-sparse-30-0001",
+    "icnet-camvid-ava-sparse-60-0001",
+    "image-retrieval-0001",
+    "intel-labs-nonlocal-dehazing",
+    "mask_rcnn_inception_resnet_v2_atrous_coco",
+    "openpose-pose",
+    "retinanet",
+    "R-FCN",
+    "rfcn-resnet101-coco",
+    "rmnet_ssd",
+    "SSD_ResNet50_V1_FPN_640x640_RetinaNet50",
+    "ssd_resnet50_v1_fpn_coco",
+    "vehicle-license-plate-detection-barrier-0123",
+    "WGAN",
+    "yolo-v2-ava-sparse-35-0001",
+    "yolo-v2-ava-sparse-70-0001",
+    "yolo-v2-tiny-ava-0001",
+    "yolo-v2-tiny-ava-sparse-30-0001",
+    "yolo-v2-tiny-ava-sparse-60-0001",
+]
+# oob_model_list = slected_model
 
 
 def get_cpu_cores():
@@ -177,7 +210,7 @@ def get_code_name():
 
 def run(args):
     cpu_cores = get_cpu_cores()
-    datatypes = ["f32", "bfloat16", "int8"
+    datatypes = ["int8", "bfloat16", "f32" 
                  ] if args.data_type == "all" else [args.data_type]
     scenarios = ["realtime", "throughput"
                  ] if args.scenario == "all" else [args.scenario]
@@ -190,35 +223,26 @@ def run(args):
     model_list = [target_model
                   ] if target_model in oob_model_list else oob_model_list
     target_model = "all" if target_model in oob_model_list else args.model
-
-    for scenario in scenarios:
-        core_per_instance_bs_pair = core_bs_scenario_map[scenario]
-        core_per_instance = core_per_instance_bs_pair[0]
-        bs = core_per_instance_bs_pair[1]
-        for option in [1, 2, 3]:
-            if option == 1:
-                # GC Generic Paattern
-                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
-                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "1"
-                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "1"
-                os.environ["_DNNL_GC_GENERIC_MHA"] = "1"
-                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
-            elif option == 2:
-                # GC Max partition
-                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
-                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "0"
-                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "0"
-                os.environ["_DNNL_GC_GENERIC_MHA"] = "0"
-                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
-            else:
-                # DNNL
-                os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "1"
-                os.environ["_DNNL_GC_GENERIC_CONV_BLOCK"] = "0"
-                os.environ["_DNNL_GC_GENERIC_PARTITIONING"] = "0"
-                os.environ["_DNNL_GC_GENERIC_MHA"] = "0"
-                os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
-
-            for dtype in datatypes:
+    for dtype in datatypes:
+        for scenario in scenarios:
+            core_per_instance_bs_pair = core_bs_scenario_map[scenario]
+            core_per_instance = core_per_instance_bs_pair[0]
+            bs = core_per_instance_bs_pair[1]
+            for option in [1]:
+                if option == 1:
+                    # GC Generic Paattern
+                    os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
+                    os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
+                elif option == 2:
+                    # GC Max partition
+                    os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
+                    os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
+                else:
+                    # DNNL
+                    os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "1"
+                    os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
+                print(dtype)
+                os.environ["_ITEX_ONEDNN_GRAPH_ALL_TYPE"] = "0" if dtype == "int8" else "1"
                 for model_name in model_list:
                     if target_model == "all" or target_model == model_name:
                         bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=0 --cores_per_instance={core_per_instance} --num_warmup=10 --num_iter=50 --channels_last=1 --profile=0 --dnnl_verbose=0".format(
@@ -315,6 +339,7 @@ def main():
     # os.environ[
     #     "LD_PRELOAD"] = "$HOME/ipex_env/miniconda/envs/ipex_env/lib/libiomp5.so:$HOME/ipex_env/miniconda/envs/ipex_env/lib/libjemalloc.so:$LD_PRELOAD"
     is_amx = is_running_on_amx()
+    os.environ["_ONEDNN_CONSTANT_CACHE"] = "1"
     os.environ[
         "DNNL_MAX_CPU_ISA"] = "AVX512_CORE_AMX" if is_amx else "AVX512_CORE_VNNI"
     os.environ[
