@@ -117,14 +117,14 @@ oob_model_list = [
     "yolo-v2-tiny-ava-sparse-60-0001",
     "yolo-v2-tiny-vehicle-detection-0001",
     "yolo-v3",
-    "yolo-v3-tiny",
-    "3d-pose-baseline",
-    "bert-base-uncased_L-12_H-768_A-12",
-    "DRAW",
-    "Hierarchical_LSTM",
-    "HugeCTR",
-    "NCF-1B",
-    "Transformer-LT",
+    "yolo-v3-tiny"
+    # "3d-pose-baseline",
+    # "bert-base-uncased_L-12_H-768_A-12",
+    # "DRAW",
+    # "Hierarchical_LSTM",
+    # "HugeCTR",
+    # "NCF-1B",
+    # "Transformer-LT",
 ]
 slected_model = [
     "faster_rcnn_inception_resnet_v2_atrous_coco",
@@ -231,18 +231,29 @@ def run(args):
             for option in [1]:
                 if option == 1:
                     # GC Generic Paattern
+                    os.environ["ITEX_ONEDNN_GRAPH"] = "1"
+                    os.environ["ITEX_NATIVE_FORMAT"] = "1"
+                    os.environ["ITEX_LAYOUT_OPT"] = "0"
                     os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
                     os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
                 elif option == 2:
                     # GC Max partition
+                    os.environ["ITEX_ONEDNN_GRAPH"] = "1"
+                    os.environ["ITEX_NATIVE_FORMAT"] = "1"
+                    os.environ["ITEX_LAYOUT_OPT"] = "0"
                     os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "0"
                     os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "1"
-                else:
+                elif option == 3:
                     # DNNL
+                    os.environ["ITEX_ONEDNN_GRAPH"] = "1"
+                    os.environ["ITEX_NATIVE_FORMAT"] = "1"
+                    os.environ["ITEX_LAYOUT_OPT"] = "0"
                     os.environ["_DNNL_DISABLE_COMPILER_BACKEND"] = "1"
                     os.environ["_DNNL_FORCE_MAX_PARTITION_POLICY"] = "0"
-                print(dtype)
-                os.environ["_ITEX_ONEDNN_GRAPH_ALL_TYPE"] = "0" if dtype == "int8" else "1"
+                elif option == 4:
+                    os.environ["ITEX_ONEDNN_GRAPH"] = "0"
+                if option != 4:
+                    os.environ["_ITEX_ONEDNN_GRAPH_ALL_TYPE"] = "0" if dtype == "int8" else "1"
                 for model_name in model_list:
                     if target_model == "all" or target_model == model_name:
                         bench_cmd = "timeout 15m ./launch_benchmark.sh --framework=tensorflow --model_name={model_name} --mode_name=throughput --precision={data_type} --batch_size={batch_size} --numa_nodes_use=0 --cores_per_instance={core_per_instance} --num_warmup=10 --num_iter=50 --channels_last=1 --profile=0 --dnnl_verbose=0".format(

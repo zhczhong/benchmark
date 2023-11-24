@@ -4,9 +4,6 @@ set -xe
 source ../../common.sh
 model_list_json="../../models.json"
 
-export ITEX_ONEDNN_GRAPH=1   # 1 for enable LLGA, 0 for ITEX kernels
-export ITEX_NATIVE_FORMAT=1
-export ITEX_LAYOUT_OPT=0
 # export _ITEX_ONEDNN_GRAPH_ALL_TYPE=1    # 1 for enable all LLGA partition rewrite, 0 for rewriting only int8 type kernels
 export _ITEX_ONEDNN_GRAPH_COMPILER_BACKEND=1    # 1 for enabling compiler backend, 0 for disabling compiler backend
 export _ITEX_ONEDNN_GRAPH_DNNL_BACKEND=1    # 1 for enabling dnnl backend, 0 for disabling dnnl backend
